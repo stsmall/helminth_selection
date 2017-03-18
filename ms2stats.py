@@ -262,8 +262,7 @@ def parse_msfile(msfiles_in, popsizelist, number_reps, priors):
 
 
 def parse_msstats(msstats_in, priors, demes):
-    """parses file from msstats into pops and means values
-
+    """
     Parameters
     ----------
     msfiles_in : int
@@ -282,10 +281,10 @@ def parse_msstats(msstats_in, priors, demes):
     for f in range(priors):
         msstat = pd.read_table("{}_{}".format(msstats_in, f), header=0,
                                sep='\t')
-        meanstat = msstat.groupby('pop').mean().values[2:]
+        cols = [i for i in msstat.columns[2:]]
+        meanstat = msstat.groupby('pop')[cols].mean().values
         # add to abcstats
         abcstats.append(meanstat)
-    cols = msstat.columns[2:]
 
     return(abcstats, cols)
 
