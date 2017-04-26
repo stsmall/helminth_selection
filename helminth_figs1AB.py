@@ -59,7 +59,6 @@ def parse_msfile(msout, nhap, num_reps):
                 except IndexError:
                     break
                 except ValueError:
-                    #print(line)
                     sdig = [i for i, s in enumerate(line) if not s.isdigit()]
                     x = 1
                     for s in sdig:
@@ -74,7 +73,7 @@ def parse_msfile(msout, nhap, num_reps):
             posdict[str(rep)] = pos
         elif line.startswith("OriginCount"):
             origcount[rep] = line.strip().split(":")[1]
-            print("Orig:{}".format(line.strip().split(":")[1]))
+            # print("Orig:{}".format(line.strip().split(":")[1]))
         else:
             pass
     return(gtdict, posdict, origcount, freqtrace)
@@ -95,8 +94,8 @@ def fig1a_stats(freqtrace, time, Ne, gens):
     return(freq_mean)
 
 
-def fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAa, saa, sft, sff,
-          gens, selp, time):
+def fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAA, sAa, saa, sft,
+          sff, gens, selp, time):
     """
     Recreates data for Figure 1A
     """
@@ -131,6 +130,7 @@ def fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAa, saa, sft, sff,
                             'time': time * len(selp),
                             'freq': freq
                             })
+    dfFig1a = dfFig1a.loc[:, ['SAA', 'SAa', 'time', 'freq']]
     dfFig1a.to_csv("Fig1A_helminth.csv")
     return(dfFig1a)
 
@@ -147,58 +147,59 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, popall):
     hapconfig = []  # haplotype configuration
     rfreq = []  # frequency of resistant allele
     popiix = []
+    hapconfig_commonR = []
     ix = 0
-    try:
-        if popall:
-            popiix.append(range(0, sum(demesizelist)))
-        else:
-            for pop in demesizelist:
-                popiix.append(range(ix, ix + pop))
-                ix += pop
-        for rep in gtdict.keys():
-            smark = np.where(posdict[rep] == sp)[0]
-            for pop in popiix:
-                piix = gtdict[rep][pop]
-                riix = np.where(piix[:, smark] > 0)[0]
-                if any(riix):
-                    hapr = gtdict[rep][riix]
-                    uniqhaps = np.array([np.array(x) for x in set(tuple(x)
-                                         for x in hapr)])
-                    hapfreq = np.array([len(hapr[np.all(hapr == x, axis=1)])
-                                        for x in uniqhaps], dtype=int)
-                    # full hap config
-                    n = sum(hapfreq)
-                    C_freq, C_count = np.unique(hapfreq, return_counts=True)
-                    C = np.zeros(n)
-                    C[C_freq - 1] = C_count
-                    # haplotype diversity
-                    Hd = 1 - sum([(((i+1)/float(n))**2) * c
-                                  for i, c in enumerate(C)])
-                    M = max(np.nonzero(C)[0]) + 1  # greatest non-zero position
-                    K = sum(C)  # number of haps
-            #        pdist = np.zeros((hapr.shape[0], hapr.shape[0]))
-            #        [np.count_nonzero(a!=b) for i, a in enumerate(hapr)
-            #         for j, b in enumerate(hapr) if j >= i]
-                else:
-                    C = np.zeros(piix.shape[0])
-                    K = 0
-                    M = 0
-                    Hd = 0
-                rfreq.append(riix.shape[0])
-                hapconfig.append(C)
-                nR.append(K)
-                nRmax.append(M)
-                hd.append(Hd)
-    except:
-        import ipdb; ipdb.set_trace()
-#    hapsummR = [np.mean(pop, axis=0) for i, pop in enumerate(zip(*hapconfig))]
-#    haparrayR = [np.vstack(i) for i in zip(*hapconfig)]
-#    for conf in haparrayR:
-#        uniq = np.array([np.array(x) for x in set(tuple(x) for x in conf)])
-#        hapfreq = np.array([len(conf[np.all(conf == x, axis=1)])
-#                            for x in uniqhaps], dtype=int)
-#        hapconfig_commonR.append(zip(uniq, hapfreq))
-
+    if popall:
+        popiix.append(range(0, sum(demesizelist)))
+    else:
+        for pop in demesizelist:
+            popiix.append(range(ix, ix + pop))
+            ix += pop
+    for rep in gtdict.keys():
+        smark = np.where(posdict[rep] == sp)[0]
+        for pop in popiix:
+            popix = np.array(pop)
+            piix = gtdict[rep][pop]
+            riix = np.where(piix[:, smark] > 0)[0]
+            siix = popix
+            if riix.any():
+                siix = popix[np.logical_not(riix == popix)]
+                hapr = gtdict[rep][riix]
+                uniqhaps = np.array([np.array(x) for x in set(tuple(x)
+                                     for x in hapr)])
+                hapfreq = np.array([len(hapr[np.all(hapr == x, axis=1)])
+                                    for x in uniqhaps], dtype=int)
+                # full hap config
+                n = sum(hapfreq)
+                C_freq, C_count = np.unique(hapfreq, return_counts=True)
+                C = np.zeros(n)
+                C[C_freq - 1] = C_count
+                # haplotype diversity
+                Hd = 1 - sum([(((i+1)/float(n))**2) * c
+                              for i, c in enumerate(C)])
+                M = max(np.nonzero(C)[0]) + 1  # greatest non-zero position
+                K = sum(C)  # number of haps
+        #        pdist = np.zeros((hapr.shape[0], hapr.shape[0]))
+        #        [np.count_nonzero(a!=b) for i, a in enumerate(hapr)
+        #         for j, b in enumerate(hapr) if j >= i]
+            else:
+                C = np.zeros(piix.shape[0])
+                K = 0
+                M = 0
+                Hd = 0
+            rfreq.append(riix.shape[0] / float(piix.shape[0]))
+            hapconfig.append(C)
+            # print(C)
+            nR.append(K)
+            nRmax.append(M)
+            hd.append(Hd)
+#            hapsummR = [np.mean(pop, axis=0) for i, pop in enumerate(zip(*hapconfig))]
+#            haparrayR = [np.vstack(i) for i in zip(*hapconfig)]
+#            for conf in haparrayR:
+#                uniq = np.array([np.array(x) for x in set(tuple(x) for x in conf)])
+#                hapfreq = np.array([len(conf[np.all(conf == x, axis=1)])
+#                               for x in uniqhaps], dtype=int)
+#            hapconfig_commonR.append(zip(uniq, hapfreq))
     return(np.mean(nR), np.mean(hd), np.mean(nRmax), np.mean(rfreq))
 
 
@@ -209,6 +210,10 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAA, sAa, saa, sit,
     nhap = sum(pops)
     demes = len(pops)
     orig = []
+    nR = []
+    hd = []
+    nRmax = []
+    rfreq = []
     for fq in freqp:
         for m in migp:
             ms_params = {
@@ -237,8 +242,12 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAA, sAa, saa, sit,
             msout = subprocess.Popen(mscmd, shell=True, stdout=subprocess.PIPE)
             gtdict, posdict, origcount, freqtrace = parse_msfile(msout, nhap, reps)
             # calc stats
-            nR, hd, nRmax, rfreq = fig1b_stats(gtdict, posdict, pops, sp, popall)
+            nRt, hdt, nRmaxt, rfreqt = fig1b_stats(gtdict, posdict, pops, sp, popall)
             orig.append(sum([i > 1 for i in origcount]) / float(reps))
+            nR.append(nRt)
+            hd.append(hdt)
+            nRmax.append(nRmaxt)
+            rfreq.append(rfreqt)
     if popall:
         arraylen = len(list(migp) * len(freqp))
         dfFig1b = pd.DataFrame({'freq': np.repeat(freqp, len(migp)),
@@ -247,18 +256,23 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAA, sAa, saa, sit,
                                 'Rmaxf': nRmax,
                                 'Rhapdiv': hd,
                                 'Rfreq': rfreq,
-                                'origins': np.repeat(orig, arraylen)
+                                'origins': orig
                                 })
+        dfFig1b = dfFig1b.loc[:, ['freq', 'mig', 'nRhap', 'Rmaxf',
+                                  'Rhapdiv', 'Rfreq', 'origins']]
         dfFig1b.to_csv("Fig1B_helminth.csv")
     else:
+        import ipdb;ipdb.set_trace()
         dfFig1b = pd.DataFrame({'freq': np.repeat(freqp, demes),
                                 'mig': np.repeat(migp, demes),
                                 'nRhap': nR,
                                 'Rmaxf': nRmax,
                                 'Rhapdiv': hd,
                                 'Rfreq': rfreq,
-                                'origins': np.repeat(orig, arraylen*demes)
+                                'origins': np.repeat(orig, demes)
                                 })
+        dfFig1b = dfFig1b.loc[:, ['freq', 'mig', 'nRhap', 'Rmaxf',
+                                  'Rhapdiv', 'Rfreq', 'origins']]
         dfFig1b.to_csv("Fig1B_helminth.csv")
     return(dfFig1b)
 
@@ -287,7 +301,7 @@ if __name__ == '__main__':
     sp = 0.5  # position of the selected locus
     smu = 0.01  # mutation rate from wildtype to derived
     gens = 12  # gens per year
-    # fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAa, saa, sft, sff,
-    #       gens, selp, time)
+    fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAA, sAa, saa, sft,
+          sff, gens, selp, time)
     fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAA, sAa, saa, sit,
           popall, freqp, migp)
