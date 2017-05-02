@@ -26,6 +26,8 @@ parser.add_argument('-D', "--dominant", action="store_true",
                     help="effect is dominant")
 parser.add_argument('-A', "--additive", action="store_true",
                     help="effect is additive")
+parser.add_argument('-t', "--threads", type=int, required=False,
+                    help="threads")
 args = parser.parse_args()
 
 
@@ -124,7 +126,7 @@ def fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saac, sft,
                     'sff': sff}
         msms_base = ("{msms} -N {Ne} -ms {nhaps} {nreps} -s {seg} -r {rho} "
                      "-Sp {selpos} -Smu {smu} -SAA {sAA} -SAa {sAa} -Saa {saa}"
-                     " -SF {sft} {sff} -oOC -Smark -oTrace -SFC")
+                     " -SF {sft} {sff} -oOC -Smark -oTrace")
         mscmd = msms_base.format(**ms_params)
         print(mscmd)
         msout = subprocess.Popen(mscmd, shell=True, stdout=subprocess.PIPE)
@@ -258,7 +260,7 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
                          "-r {rho} -I {demes} {Nm} -Sp {selpos} -Smu {smu} "
                          "-SAA {sAA} -SAa {sAa} -Saa {saa}"
                          " -SI {sit} {sif}"
-                         " -oOC -Smark")
+                         " -oOC -Smark -SFC")
             mscmd = msms_base.format(**ms_params)
             print(mscmd)
             msout = subprocess.Popen(mscmd, shell=True, stdout=subprocess.PIPE)
