@@ -1,46 +1,44 @@
-# 0.00012: 40yrs,gens 12
-# 0.00024: 80yrs, gen 12; 40yrs gens 24
-# 0.00048: 80yrs, gen 24
+Figures
+------
+# Fig1 A. Selection strength and starting allele freq for different times of selection; freq vs SAA
+## ./msms -N 1000000 -ms 20 10000 -s 50 -r 15 -Sp 0.5 -Smu 0.01 -SAA $selp -SAa $selp -Saa 0 -SF 0 0.3 -oOC -Smark -oTrace -SFC
 
-Fig1 A. Selection strength and starting allele freq for different times of selection; freq vs SAA
-./msms -N 1000000 -ms 20 10000 -s 50 -r 15 -Sp 0.8 -Smu 0.01 -SAA $selp -SF 0 0.3 -oOC -Smark -oTrace
+# Fig1 B. Facet Pi plots in multi population model; sel vs Nm
+## ./msms -N 1000000 -ms 100 10000 -s 50 -r 15 -I 5 20 20 20 20 20 $Nmp -Sp 0.5 -Smu 0.01 -SAA $selp -SAa $selp -Saa 0 -SI 0.00024 5 0 0 0 0 0 -oOC -Smark
 
-Fig1 B. Surface of hapdiv in multi population model; freq vs Nm
-./msms -N 1000000 -ms 100 10000 -s 50 -r 15 -I 5 20 20 20 20 20 $Nmp -Sp 0.8 -Smu 0.01 -SAA 10000 -SI 0.00012 5 $freqp $freqp $freqp $freqp $freqp -oOC -Smark
+# Fig1 C. Fluctuating selection where this is treatment every 5 years and selection lasts for 5 years
+## ./msms -N 1000000 -ms 20 10000 -s 50 -r 15 -SI 0.00012 1 0 -Smu 0.01 -SAA 10000 -SAa 0 -Saa 0 -Sp 0.5 -SFC -oOC -oTrace -Smark
+  *-Sc .000105 -1 0 0 0 -Sc .00009 -1 2*N*s 0 0 -Sc .000075 -1 0 0 0 -Sc .00006 -1 2*N*s 0 0*
 
-Fig1 C. Fluctuating selection where this is treatment every 5 years and selection lasts for 5 years
-./msms -N 1000000 -ms 20 10000 -s 50 -r 15 -SI 0.00012 1 0 -Smu 0.01 -SAA 10000 -SAa 0 -Saa 0 -Sp 0.8 -SFC -oOC -oTrace -Smark
-  -Sc .000105 -1 0 0 0 -Sc .00009 -1 2*N*s 0 0 -Sc .000075 -1 0 0 0 -Sc .00006 -1 2*N*s 0 0
+# Fig1 D. Gene flow from population under selection to a population that is not under selection condition on final freq in pop1
+## ./msms -N 1000000 -ms 100 10000 -s 50 -r 15 -I 5 20 20 20 20 20 $Nmp -Sp 0.5 -Smu 0.01 -SAA 10000 -SAa 10000 -SF 0 1 0.3 -oOC -Smark -oTrace
+  *examine the freq of resistant allele in the 5th column in the trace*
 
-Fig1 D. Gene flow from population under selection to a population that is not under selection condition on final freq in pop1
-./msms -N 1000000 -ms 100 10000 -s 50 -r 15 -I 5 20 20 20 20 20 $Nmp -Sp 0.8 -Smu 0.01 -SAA 10000 -SF 0 1 0.3 -oOC -Smark -oTrace
-  #examine the freq of resistant allele in the 5th column in the trace
+# Fig1 E. Gene flow from a population under selection to a population that is also under selection
+## ./msms -N 1000000 -ms 100 10000 -s 50 -r 15 -I 2 20 20 $Nmp -Sp 0.5 -SAA 10000 -SAa 10000 -SI 0.00024 2 1E-6 0 -oOC -Smark -oTrace
+  *examine the freq of resistant allele in the 5th column in the trace, can also add -Smu 0.01 de novo in both pops*
 
-Fig1 E. Gene flow from a population under selection to a population that is also under selection
-./msms -N 1000000 -ms 100 10000 -s 50 -r 15 -I 2 20 20 $Nmp -Sp 0.8 -SAA 10000 -SI 0.00012 2 1E-6 0 -oOC -Smark -oTrace
-  #examine the freq of resistant allele in the 5th column in the trace, can also add -Smu 0.01 de novo in both pops
+Origins
+------
+# DN1 no recombination
+## ./msms -N 1000000 -ms 20 10000 -s 50 -Sp 0.5 -Smu 0.01 -SAA 10000 -SAa 10000 -SI 0.00024 1 0 -oOC -Smark
+# DN1 with recombination
+## ./msms -N 1000000 -ms 20 10000 -s 50 -r 15 -Sp 0.5 -Smu .01 -SAA 10000 -SAa 10000 -SI 0.00024 1 0 -oOC -Smark ###recomb
+# SGV1_f01 starting allele freq 0.01
+## ./msms -N 1000000 -ms 100 10000 -s 50 -r 15 -Sp 0.5 -Smu .01 -SAA 10000 -SI 0.00024 1 0.01 -oOC -Smark
+# SGV1_f05 starting allele freq 0.05
+## ./msms -N 1000000 -ms 100 10000 -s 50 -r 15 -Sp 0.5 -Smu .01 -SAA 10000 -SI 0.00024 1 0.05 -oOC -Smark
 
-Table 1: origins, nRHaps, Rfreq, rHd
-#DN1
-./msms -N 1000000 -ms 20 10000 -s 50 -Sp 0.8 -Smu 0.01 -SAA 10000 -SI 0.00024 1 0 -oOC -Smark
-#DN1p
-./msms -N 1000000 -ms 20 10000 -s 50 -r 15 -Sp 0.8 -Smu .01 -SAA 10000 -SI 0.00024 1 0 -oOC -Smark
-#SGV1_f01
-./msms -N 1000000 -ms 100 10000 -s 50 -r 15 -Sp 0.8 -Smu .01 -SAA 10000 -SI 0.00024 1 0.01 -oOC -Smark
-#SGV1_f05
-./msms -N 1000000 -ms 100 10000 -s 50 -r 15 -Sp 0.8 -Smu .01 -SAA 10000 -SI 0.00024 1 0.05 -oOC -Smark
-#DN5m
-./msms -N 1000000 -ms 100 10000 -s 50 -r 15 -I 5 20 20 20 20 20 50 -Sp 0.8 -Smu .01 -SAA 10000 -SI 0.00024 5 0 0 0 0 0 -oOC -Smark
-#SGV5_f01m
-./msms -N 1000000 -ms 100 10000 -s 50 -r 15 -I 5 20 20 20 20 20 50 -Sp 0.8 -Smu .01 -SAA 10000 -SI 0.00024 5 0.01 0.01 0.01 0.01 0.01 -oOC -Smark
+Table
+------
+# FST with no migration
+## ./msms -N 1000000 -ms 100 1 -s 50 -r 15 -I 5 20 20 20 20 20 0 -ej 0.00060 2 1 -ej 0.00060 3 1 -ej 0.00060 4 1 -ej 0.00060 5 1
 
-# In text stats
-#FST with no migration
-./msms -N 1000000 -ms 100 10000 -s 50 -r 15 -I 5 20 20 20 20 20 0 -ej 0.00024| ./msstats -I 5 20 20 20 20 20
-#FST with migration
-./msms -N 1000000 -ms 100 10000 -s 50 -r 15 -I 5 20 20 20 20 20 50 -ej 0.00024| ./msstats -I 5 20 20 20 20 20
 
----
-grep "Origin" DN1r.${thetap}-${selp}.msms | cut -d":" -f2 | awk '$1 > 1 { count ++ } END { print count / 10000 }' >> probRorigin.out
-grep -B1 "segsites" DN1r.${thetap}-${selp}.msms | cut -f 3 | awk '{ sum += $1 } END { print sum / 10000 } >> freqRallele.out
------
+Notes
+------
+*0.00012: 40yrs,gens 12*
+*0.00024: 80yrs, gen 12; 40yrs gens 24*
+*0.00048: 80yrs, gen 24*
+*grep "Origin" DN1r.${thetap}-${selp}.msms | cut -d":" -f2 | awk '$1 > 1 { count ++ } END { print count / 10000 }' >> probRorigin.out*
+*grep -B1 "segsites" DN1r.${thetap}-${selp}.msms | cut -f 3 | awk '{ sum += $1 } END { print sum / 10000 } >> freqRallele.out*

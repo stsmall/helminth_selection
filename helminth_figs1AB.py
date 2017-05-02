@@ -22,6 +22,10 @@ parser.add_argument('-fa', "--figA", action="store_true",
                     help="runfigA")
 parser.add_argument('-fb', "--figB", action="store_true",
                     help="runfigB")
+parser.add_argument('-D', "--dominant", action="store_true",
+                    help="effect is dominant")
+parser.add_argument('-A', "--additive", action="store_true",
+                    help="effect is additive")
 args = parser.parse_args()
 
 
@@ -96,7 +100,7 @@ def fig1a_stats(freqtrace, time, Ne, gens):
     return(freq_mean)
 
 
-def fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAA, sAa, saa, sft,
+def fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saac, sft,
           sff, gens, selp, time):
     """
     Recreates data for Figure 1A
@@ -113,22 +117,22 @@ def fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAA, sAa, saa, sft,
                     'rho': rho,
                     'selpos': sp,
                     'smu': smu,
-                    'sAA': selco * 2 * Ne,
-                    'sAa': selco * Ne * sAa,
+                    'sAA': selco * sAAc * Ne,
+                    'sAa': selco * sAac * Ne,
                     'saa': saa,
                     'sft': sft,
                     'sff': sff}
         msms_base = ("{msms} -N {Ne} -ms {nhaps} {nreps} -s {seg} -r {rho} "
                      "-Sp {selpos} -Smu {smu} -SAA {sAA} -SAa {sAa} -Saa {saa}"
-                     " -SF {sft} {sff} -oOC -Smark -oTrace")
+                     " -SF {sft} {sff} -oOC -Smark -oTrace -SFC")
         mscmd = msms_base.format(**ms_params)
         print(mscmd)
         msout = subprocess.Popen(mscmd, shell=True, stdout=subprocess.PIPE)
         gtdict, posdict, origcount, freqtrace = parse_msfile(msout, nhap, reps)
         # calc stats
         freq.extend(fig1a_stats(freqtrace, time, Ne, gens))
-    dfFig1a = pd.DataFrame({'SAA': np.repeat(selp * 2 * Ne, len(time)),
-                            'SAa': np.repeat(selp * Ne * sAa, len(time)),
+    dfFig1a = pd.DataFrame({'SAA': np.repeat(selp, len(time)),
+                            'SAa': np.repeat(selp, len(time)),
                             'time': time * len(selp),
                             'freq': freq
                             })
@@ -147,7 +151,7 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp):
 #    nRmax = []  # max freq of resistant hap
 #    hd = []  # haplotype diversity; Depaulis and Veuille
 #    hapconfig = []  # haplotype configuration
-#    rfreq = []  # frequency of resistant allele
+    rfreq = []  # frequency of resistant allele
 #    ev = []
 #    pdist = []
 #    hapconfig_commonR = []
@@ -190,8 +194,7 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp):
 #                pdist = 0
         Rplot.append(np.sort(hapfreq))
         Splot.append(piix.shape[0] - riix.shape[0])
-
-#            rfreq.append(riix.shape[0] / float(piix.shape[0]))
+        rfreq.append(riix.shape[0] / float(piix.shape[0]))
 #            hapconfig.append(C)
 #            print(C)
 #            nR.append(K)
@@ -204,6 +207,7 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp):
         for i, hap in enumerate(r):
             Rplot_m[i] += hap
     Piplot = np.append(Rplot_m, sum(Splot))
+    Rfreq = np.repeat(np.mean(rfreq), len(Piplot))
 #    hapsummR = [np.mean(pop, axis=0) for i, pop in enumerate(zip(*hapconfig))]
 #    haparrayR = [np.vstack(i) for i in zip(*hapconfig)]
 #    for conf in haparrayR:
@@ -215,21 +219,23 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp):
 #    np.mean(hd)
 #    np.mean(nRmax)
 #    np.mean(rfreq)
-    return(Piplot)
+    return(Piplot, Rfreq)
 
 
-def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAA, sAa, saa, sit,
-          freqp, migp):
+def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
+          sif_l, selco, migp):
     """Recreates data for Figure 1B
     """
     nhap = sum(pops)
     demes = len(pops)
     orig = []
     piplot = []
-    freqdf = []
+    selpdf = []
     mdf = []
     strdf = []
-    for fq in freqp:
+    freqr = []
+    sif = sif_l * demes
+    for selco in selp:
         for m in migp:
             ms_params = {
                         'msms': msms,
@@ -239,14 +245,14 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAA, sAa, saa, sit,
                         'seg': s,
                         'rho': rho,
                         'demes': "{} {}".format(demes,
-                                                (str(pops[0]) + ' ')*demes),
+                                                " ".join(map(str, pops))),
                         'selpos': sp,
                         'smu': smu,
-                        'sAA': sAA * 2 * Ne,
-                        'sAa': sAa * Ne,  # 5000
+                        'sAA': selco * sAAc * Ne,
+                        'sAa': selco * sAac * Ne,
                         'saa': saa,
                         'sit': sit,
-                        'sif': "{} {}".format(demes, (str(fq) + ' ') * demes),
+                        'sif': "{} {}".format(demes, " ".join(map(str, sif))),
                         'Nm': m * 4 * Ne}
             msms_base = ("{msms} -N {Ne} -ms {nhaps} {nreps} -s {seg} "
                          "-r {rho} -I {demes} {Nm} -Sp {selpos} -Smu {smu} "
@@ -259,50 +265,68 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAA, sAa, saa, sit,
             gtdict, posdict, origcount, freqtrace = parse_msfile(msout, nhap,
                                                                  reps)
             # calc stats
-            Piplot = fig1b_stats(gtdict, posdict, pops, sp)
+            Piplot, freqR = fig1b_stats(gtdict, posdict, pops, sp)
             piplot.extend(Piplot)
+            freqr.extend(freqR)
             orig.append(sum([i > 1 for i in origcount]) / float(reps))
-            freqdf.extend([fq]*len(Piplot))
+            selpdf.extend([selco]*len(Piplot))
             mdf.extend([m]*len(Piplot))
             strtemp = ["R"] * (len(Piplot) - 1)
             strtemp.extend("S")
             strdf.extend(strtemp)
-    dfFig1b = pd.DataFrame({'freq': freqdf,
+    dfFig1b = pd.DataFrame({'sel': selpdf,
                             'mig': mdf,
                             'idHap': strdf,
-                            'piHap': piplot
+                            'piHap': piplot,
+                            'freqR': freqr,
                             })
-    dfFig1b = dfFig1b.loc[:, ['freq', 'mig', 'idHap', 'piHap']]
+    dfFig1b = dfFig1b.loc[:, ['sel', 'mig', 'idHap', 'piHap', 'freqR']]
     dfFig1b.to_csv("Fig1B_helminth.csv")
     return(None)
 
 if __name__ == '__main__':
+    # universal
     Ne = args.effectivesize
     pops = args.populations
     reps = args.reps
     msms = '/home/scott/programs_that_work/msms/bin/msms'
-    # Fig1A
-    selp = np.arange(0.00001, 0.1, 0.001)  # selection coefficient
-    time = [20, 40, 60, 80]  # time in years
-    sft = 0  # time of selection stopping; fig1A
-    sff = 0.30  # final freq of allele; fig1A
-    # Fig1B
-    freqp = np.arange(.05, 0.2, 0.01)  # freq start
-    migp = np.arange(0.000001, 0.01, 0.001)  # migration proportion
-    sit = 0.00024  # time of selection starting in 4 *Ne * gens; fig1B
-    sAA = 0.01  # selection coeff homo; fig1B
-    sAa = 0  # selection coeff het; fig1B
-    saa = 0  # selection coeff wildtype homo; fig1B
-    # general
     s = 50  # number of seg sites
     rho = 15  # recombination rate, rho
     theta = 0  # theta, population mutation rate
     sp = 0.5  # position of the selected locus
     smu = 0.01  # mutation rate from wildtype to derived
     gens = 12  # gens per year
+    saa = 0  # selection coeff wildtype homo; fig1B
+
+    # selection coefficient
+    selp = np.arange(0.00001, 0.1, 0.001)  # selection coefficient
+
+    # dominance
+    if args.dominant:
+        # dominant
+        sAAc = 2
+        sAac = 2
+    elif args.additive:
+        # recessive
+        sAAc = 2
+        sAac = 1
+    else:
+        sAAc = 2
+        sAac = 0
+
+    # Fig1A
+    time = [20, 40, 60, 80]  # time in years
+    sft = 0  # time of selection stopping; fig1A
+    sff = 0.30  # final freq of allele; fig1A
+
+    # Fig1B
+    migp = np.arange(0.000001, 0.01, 0.001)  # migration proportion
+    sif_l = [0]
+    sit = 0.00024  # time of selection starting in 4 *Ne * gens; fig1B
+
     if args.figA:
-        fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAA, sAa, saa, sft,
-              sff, gens, selp, time)
+        fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa,
+              sft, sff, gens, selp, time)
     if args.figB:
-        fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAA, sAa, saa, sit,
-              freqp, migp)
+        fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa,
+              sit, sif_l, selp, migp)
