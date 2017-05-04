@@ -27,7 +27,7 @@ parser.add_argument('-D', "--dominant", action="store_true",
 parser.add_argument('-A', "--additive", action="store_true",
                     help="effect is additive")
 parser.add_argument('-t', "--threads", type=int, required=False,
-                    help="threads")
+                    default=1, help="threads")
 args = parser.parse_args()
 
 
@@ -103,12 +103,13 @@ def fig1a_stats(freqtrace, time, Ne, gens):
 
 
 def fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saac, sft,
-          sff, gens, selp, time):
+          sff, gens, selp, time, threads):
     """
     Recreates data for Figure 1A
     """
     freq = []
     nhap = pops[0]
+    orig = []
     for selco in selp:
         ms_params = {
                     'msms': msms,
@@ -123,22 +124,26 @@ def fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saac, sft,
                     'sAa': selco * sAac * Ne,
                     'saa': saa,
                     'sft': sft,
-                    'sff': sff}
+                    'sff': sff,
+                    't': threads}
         msms_base = ("{msms} -N {Ne} -ms {nhaps} {nreps} -s {seg} -r {rho} "
                      "-Sp {selpos} -Smu {smu} -SAA {sAA} -SAa {sAa} -Saa {saa}"
-                     " -SF {sft} {sff} -oOC -Smark -oTrace")
+                     " -SF {sft} {sff} -oOC -Smark -oTrace -threads {t}")
         mscmd = msms_base.format(**ms_params)
         print(mscmd)
         msout = subprocess.Popen(mscmd, shell=True, stdout=subprocess.PIPE)
         gtdict, posdict, origcount, freqtrace = parse_msfile(msout, nhap, reps)
         # calc stats
         freq.extend(fig1a_stats(freqtrace, time, Ne, gens))
-    dfFig1a = pd.DataFrame({'SAA': np.repeat(selp, len(time)),
-                            'SAa': np.repeat(selp, len(time)),
+        orig.append(np.repeat(sum([i > 1 for i in origcount])/float(reps),
+                              len(time)))
+    dfFig1a = pd.DataFrame({'SAA': np.repeat(selp * sAAc, len(time)),
+                            'SAa': np.repeat(selp * sAac, len(time)),
                             'time': time * len(selp),
-                            'freq': freq
+                            'freq': freq,
+                            'orig': np.concatenate(orig).ravel()
                             })
-    dfFig1a = dfFig1a.loc[:, ['SAA', 'SAa', 'time', 'freq']]
+    dfFig1a = dfFig1a.loc[:, ['SAA', 'SAa', 'time', 'freq', 'orig']]
     dfFig1a.to_csv("Fig1A_helminth.csv")
     return(dfFig1a)
 
@@ -225,7 +230,7 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp):
 
 
 def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
-          sif_l, selco, migp):
+          sif_l, selco, migp, threads):
     """Recreates data for Figure 1B
     """
     nhap = sum(pops)
@@ -255,12 +260,13 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
                         'saa': saa,
                         'sit': sit,
                         'sif': "{} {}".format(demes, " ".join(map(str, sif))),
-                        'Nm': m * 4 * Ne}
+                        'Nm': m * 4 * Ne,
+                        't': threads}
             msms_base = ("{msms} -N {Ne} -ms {nhaps} {nreps} -s {seg} "
                          "-r {rho} -I {demes} {Nm} -Sp {selpos} -Smu {smu} "
                          "-SAA {sAA} -SAa {sAa} -Saa {saa}"
                          " -SI {sit} {sif}"
-                         " -oOC -Smark -SFC")
+                         " -oOC -Smark -SFC -threads {t}")
             mscmd = msms_base.format(**ms_params)
             print(mscmd)
             msout = subprocess.Popen(mscmd, shell=True, stdout=subprocess.PIPE)
@@ -270,7 +276,9 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
             Piplot, freqR = fig1b_stats(gtdict, posdict, pops, sp)
             piplot.extend(Piplot)
             freqr.extend(freqR)
-            orig.append(sum([i > 1 for i in origcount]) / float(reps))
+            orig.append(np.repeat(sum([i > 1 for i in origcount])/float(reps),
+                        len(time)))
+#            orig.append(np.repeat(np.mean(origcount), len(Piplot)))
             selpdf.extend([selco]*len(Piplot))
             mdf.extend([m]*len(Piplot))
             strtemp = ["R"] * (len(Piplot) - 1)
@@ -281,8 +289,9 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
                             'idHap': strdf,
                             'piHap': piplot,
                             'freqR': freqr,
+                            'orig': np.concatenate(orig).ravel()
                             })
-    dfFig1b = dfFig1b.loc[:, ['sel', 'mig', 'idHap', 'piHap', 'freqR']]
+    dfFig1b = dfFig1b.loc[:, ['sel', 'mig', 'idHap', 'piHap', 'freqR', 'orig']]
     dfFig1b.to_csv("Fig1B_helminth.csv")
     return(None)
 
@@ -292,6 +301,7 @@ if __name__ == '__main__':
     pops = args.populations
     reps = args.reps
     msms = '/home/scott/programs_that_work/msms/bin/msms'
+    threads = args.threads
     s = 50  # number of seg sites
     rho = 15  # recombination rate, rho
     theta = 0  # theta, population mutation rate
@@ -328,7 +338,7 @@ if __name__ == '__main__':
 
     if args.figA:
         fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa,
-              sft, sff, gens, selp, time)
+              sft, sff, gens, selp, time, threads)
     if args.figB:
         fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa,
-              sit, sif_l, selp, migp)
+              sit, sif_l, selp, migp, threads)
