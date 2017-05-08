@@ -276,9 +276,9 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
             Piplot, freqR = fig1b_stats(gtdict, posdict, pops, sp)
             piplot.extend(Piplot)
             freqr.extend(freqR)
-            orig.append(np.repeat(sum([i > 1 for i in origcount])/float(reps),
-                        len(time)))
-#            orig.append(np.repeat(np.mean(origcount), len(Piplot)))
+#            orig.append(np.repeat(sum([i > 1 for i in origcount])/float(reps),
+#                        len(time)))
+            orig.append(np.repeat(np.mean(origcount), len(Piplot)))
             selpdf.extend([selco]*len(Piplot))
             mdf.extend([m]*len(Piplot))
             strtemp = ["R"] * (len(Piplot) - 1)
