@@ -300,11 +300,11 @@ if __name__ == '__main__':
     Ne = args.effectivesize
     pops = args.populations
     reps = args.reps
-    msms = '/home/scott/programs_that_work/msms/bin/msms'
+    msms = '/home/ssmall2/programs_that_work/msms/bin/msms'
     threads = args.threads
-    s = 50  # number of seg sites
-    rho = 15  # recombination rate, rho
-    theta = 0  # theta, population mutation rate
+    s = 34  # number of seg sites
+    rho = 8.0  # recombination rate, rho
+    theta = 8.28  # UK 8.28, India 6.80, France 3.6, China 4.76, theta, population mutation rate
     sp = 0.5  # position of the selected locus
     smu = 0.01  # mutation rate from wildtype to derived
     gens = 12  # gens per year
@@ -329,7 +329,7 @@ if __name__ == '__main__':
     # Fig1A
     time = [20, 40, 60, 80]  # time in years
     sft = 0  # time of selection stopping; fig1A
-    sff = 0.30  # final freq of allele; fig1A
+    sff = 0.33  # final freq of allele; fig1A
 
     # Fig1B
     migp = np.arange(0.000001, 0.01, 0.001)  # migration proportion
