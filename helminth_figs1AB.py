@@ -117,6 +117,7 @@ def fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saac, sft,
                     'nhaps': nhap,
                     'nreps': reps,
                     'seg': s,
+                    'theta': theta,
                     'rho': rho,
                     'selpos': sp,
                     'smu': smu,
@@ -230,7 +231,7 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp):
 
 
 def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
-          sif_l, selco, migp, threads):
+          sif_l, selp, migp, threads, join_times, gens):
     """Recreates data for Figure 1B
     """
     nhap = sum(pops)
@@ -250,6 +251,7 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
                         'nhaps': nhap,
                         'nreps': reps,
                         'seg': s,
+                        'theta': theta,
                         'rho': rho,
                         'demes': "{} {}".format(demes,
                                                 " ".join(map(str, pops))),
@@ -258,14 +260,16 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
                         'sAA': selco * sAAc * Ne,
                         'sAa': selco * sAac * Ne,
                         'saa': saa,
-                        'sit': sit,
+                        'sit': (gens * sit) / (4.0 * Ne),
                         'sif': "{} {}".format(demes, " ".join(map(str, sif))),
                         'Nm': m * 4 * Ne,
-                        't': threads}
+                        't': threads,
+                        'time': join_times}
             msms_base = ("{msms} -N {Ne} -ms {nhaps} {nreps} -s {seg} "
                          "-r {rho} -I {demes} {Nm} -Sp {selpos} -Smu {smu} "
                          "-SAA {sAA} -SAa {sAa} -Saa {saa}"
-                         " -SI {sit} {sif}"
+                         " -SI {sit} {sif} -ej {time} 2 1 -ej {time} 3 1 "
+                         "-ej {time} 4 1 -ej {time} 5 1 "
                          " -oOC -Smark -SFC -threads {t}")
             mscmd = msms_base.format(**ms_params)
             print(mscmd)
@@ -304,14 +308,13 @@ if __name__ == '__main__':
     threads = args.threads
     s = 34  # number of seg sites
     rho = 8.0  # recombination rate, rho
-    theta = 8.28  # UK 8.28, India 6.80, France 3.6, China 4.76, theta, population mutation rate
+    theta = 8.28  # UK 8.28, India 6.80, France 3.6, China 4.76, theta
     sp = 0.5  # position of the selected locus
     smu = 0.01  # mutation rate from wildtype to derived
     gens = 12  # gens per year
     saa = 0  # selection coeff wildtype homo; fig1B
-
     # selection coefficient
-    selp = np.arange(0.00001, 0.1, 0.001)  # selection coefficient
+    selpA = np.arange(0.00, 0.1, 0.001)  # selection coefficient
 
     # dominance
     if args.dominant:
@@ -332,13 +335,17 @@ if __name__ == '__main__':
     sff = 0.33  # final freq of allele; fig1A
 
     # Fig1B
-    migp = np.arange(0.000001, 0.01, 0.001)  # migration proportion
+    migp = np.arange(0.00, 0.01, 0.001)  # migration proportion
+    selpB = np.arange(0.00, 0.06, 0.006)  # selection based on Fig1A
     sif_l = [0]
-    sit = 0.00024  # time of selection starting in 4 *Ne * gens; fig1B
+    sit = 60  # when selection was first started
+    join_times = 80  # when the farms were established
+    # time in coalescent units : (gens * time) / 4*Ne
+    # time in years : (coal_U * 4*Ne) / gen
 
     if args.figA:
         fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa,
-              sft, sff, gens, selp, time, threads)
+              sft, sff, gens, selpA, time, threads)
     if args.figB:
         fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa,
-              sit, sif_l, selp, migp, threads)
+              sit, sif_l, selpB, migp, threads, join_times, gens)
