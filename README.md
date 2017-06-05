@@ -1,5 +1,5 @@
 # helminth selection
-* Scripts for exploring selection on helminths in multiple populations. Specifically in regards to Redman 2015 in PLoS NTDs an H. contortus.
+Scripts for exploring selection on helminths in multiple populations. Specifically in regards to Redman 2015 in PLoS NTDs an H. contortus.
 
 ## fasta2pylibset.py  
 * Script accepts a fasta file and parses it for stats using pylibseq modules  
