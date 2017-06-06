@@ -264,7 +264,7 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
                         'sif': "{} {}".format(demes, " ".join(map(str, sif))),
                         'Nm': m * 4 * Ne,
                         't': threads,
-                        'time': join_times}
+                        'time': (gens * join_times) / (4.0 * Ne)}
             msms_base = ("{msms} -N {Ne} -ms {nhaps} {nreps} -s {seg} "
                          "-r {rho} -I {demes} {Nm} -Sp {selpos} -Smu {smu} "
                          "-SAA {sAA} -SAa {sAa} -Saa {saa}"
