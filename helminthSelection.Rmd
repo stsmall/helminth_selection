@@ -1,0 +1,44 @@
+---
+title: "Helminth Resist"
+output:
+  pdf_document: default
+  html_document: default
+  always_allow_html: yes
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r helminthfig1, message=FALSE}
+library(readr)
+#library(trelliscopejs)
+library(tidyverse)
+#library(plotly)
+library(scales)
+Fig1A_helminth_R <- read_csv("~/Desktop/recessive_figs/Fig1A_helminth-R.csv")
+Fig1A_helminth_D <- read_csv("~/Desktop/recessive_figs/Fig1A_helminth-D.csv")
+Fig1A_helminth_A <- read_csv("~/Desktop/recessive_figs/Fig1A_helminth-A.csv")
+
+ggplot(data=Fig1A_helminth_R,aes(x=SAA,y=(freq), color = as.factor(time))) + geom_line(size=2) + ylab("Resistant Allele Frequency") + xlab("Selection Coefficient") + theme_bw()+ggtitle("Recessive")
+ggplot(data=Fig1A_helminth_D,aes(x=SAA,y=(freq), color = as.factor(time))) + geom_line(size=2) + ylab("Resistant Allele Frequency") + xlab("Selection Coefficient") + theme_bw() +ggtitle("Dominant")
+ggplot(data=Fig1A_helminth_A,aes(x=SAA,y=(freq), color = as.factor(time))) + geom_line(size=2) + ylab("Resistant Allele Frequency") + xlab("Selection Coefficient") + theme_bw()+ggtitle("Additive")
+ggplot(data=Fig1A_helminth_D,aes(x=SAA,y=(orig), color = as.factor(time))) + geom_line(size=2) + ylab("proportion of sims with gt 1 origin") + xlab("Selection Coefficient") + theme_bw() +ggtitle("Dominant")
+
+Fig1B_helminth_A <- read_csv("~/Desktop/recessive_figs/Fig1B_helminth-A.csv.rename")
+Fig1B_helminth_D <- read_csv("~/Desktop/recessive_figs/Fig1B_helminth-D.csv.rename")
+
+ggplot(data=Fig1B_helminth_A,aes(x=sel,y=(orig), color = as.factor(mig))) + geom_line(size=2) + ylab("Average Number of Origins") + xlab("Selection Coefficient") + theme_bw() + ggtitle("Additive mig/Sel")
+ggplot(data=Fig1B_helminth_D,aes(x=sel,y=(orig), color = as.factor(mig))) + geom_line(size=2) + ylab("Average Number of Origins") + xlab("Selection Coefficient") + theme_bw() + ggtitle("Dominant mig/sel")
+
+#dominant <- ggplot(subset(Fig1B_helminth_D, piHap/20000 > 0.05)) + aes(x = reorder(mig,sel), y = piHap, fill = idHap) + geom_bar(position="stack",width=1, stat="identity") 
+#dominant + facet_trelliscope(sel ~ mig, nrow = 10, ncol = 10, path="helminthFigs", name="Dominant Selection") + coord_polar(theta="y") + scale_fill_manual(values=c("S"="blue","R0"="orangered4","R1"="orange","R2"="gold","R3"="lightcoral","R4"="firebrick2","R5"="purple","R6"="violet","R7"="coral2","R8"="darkorchid3","R9"="indianred4", "R10"="lightblue","R11"="khaki","R12"="yellow4","R13"="coral1","R14"="coral3")) + theme_void() + theme(legend.position="none")
+
+#additive <- ggplot(subset(Fig1B_helminth_A, piHap/20000 > 0.05)) + aes(x = reorder(mig,sel), y = piHap, fill = idHap) + geom_bar(position="stack",width=1, stat="identity")
+#additive + facet_trelliscope(sel ~ mig, nrow = 10, ncol = 10, name="Additive Selection", self_contained=TRUE, path="helminthFigs") + coord_polar(theta="y") + scale_fill_manual(values=c("S"="blue","R0"="orangered4","R1"="orange","R2"="gold","R3"="lightcoral","R4"="firebrick2","R5"="purple","R6"="violet","R7"="coral2","R8"="darkorchid3","R9"="indianred4", "R10"="lightblue","R11"="khaki","R12"="yellow4","R13"="coral1","R14"="coral3")) + theme_void() + theme(legend.position="none")
+
+ggplot(data=Fig1B_helminth_A, aes(x = reorder(mig,sel), y = piHap/20000, fill = idHap)) + geom_bar(width=3000,stat="identity") + facet_grid(mig ~ sel, drop=FALSE) + coord_polar(theta="y") + scale_fill_manual(values=c("S"="blue","R0"="orangered4","R1"="orange","R2"="gold","R3"="lightcoral","R4"="firebrick2","R5"="purple","R6"="violet","R7"="coral2","R8"="darkorchid3","R9"="indianred4", "R10"="lightblue","R11"="khaki","R12"="yellow4","R13"="coral1","R14"="coral3")) + scale_y_continuous(labels = percent_format(),limits=c(0,1),breaks=c(0.25,0.5,0.75,1)) + theme_void() + theme(axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) + ggtitle("additive")
+
+ggplot(data=Fig1B_helminth_D, aes(x = reorder(mig,sel), y = piHap/20000, fill = idHap)) + geom_bar(width=3000,stat="identity") + facet_grid(mig ~ sel, drop=FALSE) + coord_polar(theta="y") + scale_fill_manual(values=c("S"="blue","R0"="orangered4","R1"="orange","R2"="gold","R3"="lightcoral","R4"="firebrick2","R5"="purple","R6"="violet","R7"="coral2","R8"="darkorchid3","R9"="indianred4", "R10"="lightblue","R11"="khaki","R12"="yellow4","R13"="coral1","R14"="coral3")) + scale_y_continuous(labels = percent_format(),limits=c(0,1),breaks=c(0.25,0.5,0.75,1)) + theme_void() + theme(axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) + ggtitle("dominant")
+```
