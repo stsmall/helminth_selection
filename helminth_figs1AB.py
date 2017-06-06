@@ -237,6 +237,8 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
     nhap = sum(pops)
     demes = len(pops)
     orig = []
+    origsd = []
+    origmax = []
     piplot = []
     selpdf = []
     mdf = []
@@ -283,6 +285,8 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
 #            orig.append(np.repeat(sum([i > 1 for i in origcount])/float(reps),
 #                        len(time)))
             orig.append(np.repeat(np.mean(origcount), len(Piplot)))
+            origsd.append(np.repeat(np.std(origcount), len(Piplot)))
+            origmax.append(np.repeat(np.max(origcount),len(Piplot)))
             selpdf.extend([selco]*len(Piplot))
             mdf.extend([m]*len(Piplot))
             strtemp = ["R"] * (len(Piplot) - 1)
@@ -293,9 +297,12 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
                             'idHap': strdf,
                             'piHap': piplot,
                             'freqR': freqr,
-                            'orig': np.concatenate(orig).ravel()
+                            'orig': np.concatenate(orig).ravel(),
+                            'origsd': np.concatenate(origsd).ravel(),
+                            'origmax': np.concatenate(origmax).ravel()
                             })
-    dfFig1b = dfFig1b.loc[:, ['sel', 'mig', 'idHap', 'piHap', 'freqR', 'orig']]
+    dfFig1b = dfFig1b.loc[:, ['sel', 'mig', 'idHap', 'piHap', 'freqR', 'orig',
+                              'origsd', 'origmax']]
     dfFig1b.to_csv("Fig1B_helminth.csv")
     return(None)
 
