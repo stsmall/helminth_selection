@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Apr 19 17:31:47 2017
-
-@author: scott
+# run to create csv containing data for plotting fig1A with additive selection
+python helminth_figs1AB.py -N 350000 -p 20 -r 1000 -fa -A -t 5
+# run to create csv containing data for plotting fig1B with additive selection
+python helminth_figs1AB.py -N 350000 -p 20 20 20 20 20 -r 1000 -fb -A -t 5
+@author: stsmall
 """
 import numpy as np
 import argparse
@@ -330,7 +333,11 @@ if __name__ == '__main__':
     msms = '/home/scott/programs_that_work/msms/bin/msms'
     threads = args.threads
     s = 34  # number of seg sites
+<<<<<<< Updated upstream
     rho = args.recombination  # recombination rate, rho
+=======
+    rho = 0 # recombination rate, rho
+>>>>>>> Stashed changes
     theta = 8.28  # UK 8.28, India 6.80, France 3.6, China 4.76, theta
     sp = 0.55555  # position of the selected locus
     smu = 0.01  # mutation rate from wildtype to derived
