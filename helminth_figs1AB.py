@@ -20,6 +20,8 @@ parser.add_argument('-r', "--reps", type=int, required=True,
                     help="number of reps")
 parser.add_argument('-fa', "--figA", action="store_true",
                     help="runfigA")
+parser.add_argument('-rho', "--recombination", type=float, required=False,
+                    default=0, help="population recombination rate, default is 0")
 parser.add_argument('-fb', "--figB", action="store_true",
                     help="runfigB")
 parser.add_argument('-D', "--dominant", action="store_true",
@@ -80,7 +82,7 @@ def parse_msfile(msout, nhap, num_reps):
             gtdict[str(rep)] = gt_array
             posdict[str(rep)] = pos
         elif line.startswith("OriginCount"):
-            origcount[rep] = line.strip().split(":")[1]
+            origcount[rep] = int(line.strip().split(":")[1])
             # print("Orig:{}".format(line.strip().split(":")[1]))
         else:
             pass
@@ -149,7 +151,7 @@ def fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saac, sft,
     return(dfFig1a)
 
 
-def fig1b_stats(gtdict, posdict, demesizelist, sp):
+def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
     """calculates the haplotype diversite of haplotypes carrying the resistant
        allele. Also: number of origins, total haplotype diversity, resistant
        haplotype congfig
@@ -165,16 +167,30 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp):
 #    hapconfig_commonR = []
     Rplot = []
     Splot = []
-    for rep in gtdict.keys():
+    for rep in range(len(gtdict.keys())):
+        rep = str(rep)
         smark = np.where(posdict[rep] == sp)[0]
-        piix = gtdict[rep][0:demesizelist[0]]
-        riix = np.where(piix[:, smark] > 0)[0]
+        if len(smark) > 1:
+            print("\nSmark gt 1: rep {}\n".format(rep))
+            continue
+        piix = gtdict[rep][0:demesizelist[0]]  # index for the first pop
+        riix = np.where(piix[:, smark] > 0)[0]  # location of the selected
         if riix.any():
             hapr = gtdict[rep][riix]
             uniqhaps = np.array([np.array(x) for x in set(tuple(x)
                                  for x in hapr)])
             hapfreq = np.array([len(hapr[np.all(hapr == x, axis=1)])
                                 for x in uniqhaps], dtype=int)
+            uallel = hapr[:][:, smark]
+            puallel = gtdict[rep][:, smark]
+            print("\nrep {}".format(rep))
+            print("number of unique resistant alleles across all pops: {}".format(
+                    len(np.unique(puallel[puallel > 0]))))
+            print("number of unique resistant alleles in sampled pop: {}".format(
+                    len(np.unique(uallel[uallel > 0]))))
+            print("number of unique resistant haps in sampled pop: {}, frequencies {}".format(
+                    len(uniqhaps), hapfreq))
+            print("number of origins: {}\n".format(origcount[int(rep)]))
 #                # full hap config
 #                n = sum(hapfreq)
 #                C_freq, C_count = np.unique(hapfreq, return_counts=True)
@@ -210,11 +226,11 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp):
 #            hd.append(Hd)
 #            ev.append(Ev)
 #            pdist.append()
-    Rplot_m = np.zeros(max([len(i) for i in Rplot]))
-    for r in Rplot:
+    Rplot_m = np.zeros([len(Rplot), max([len(i) for i in Rplot])])
+    for j, r in enumerate(Rplot):
         for i, hap in enumerate(r):
-            Rplot_m[i] += hap
-    Piplot = np.append(Rplot_m, sum(Splot))
+            Rplot_m[j][i] = hap
+    Piplot = np.append(np.sum(Rplot_m, axis=0), sum(Splot))
     Rfreq = np.repeat(np.mean(rfreq), len(Piplot))
 #    hapsummR = [np.mean(pop, axis=0) for i, pop in enumerate(zip(*hapconfig))]
 #    haparrayR = [np.vstack(i) for i in zip(*hapconfig)]
@@ -279,14 +295,14 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
             gtdict, posdict, origcount, freqtrace = parse_msfile(msout, nhap,
                                                                  reps)
             # calc stats
-            Piplot, freqR = fig1b_stats(gtdict, posdict, pops, sp)
+            Piplot, freqR = fig1b_stats(gtdict, posdict, pops, sp, origcount)
             piplot.extend(Piplot)
             freqr.extend(freqR)
 #            orig.append(np.repeat(sum([i > 1 for i in origcount])/float(reps),
 #                        len(time)))
             orig.append(np.repeat(np.mean(origcount), len(Piplot)))
             origsd.append(np.repeat(np.std(origcount), len(Piplot)))
-            origmax.append(np.repeat(np.max(origcount),len(Piplot)))
+            origmax.append(np.repeat(np.max(origcount), len(Piplot)))
             selpdf.extend([selco]*len(Piplot))
             mdf.extend([m]*len(Piplot))
             strtemp = ["R"] * (len(Piplot) - 1)
@@ -311,12 +327,12 @@ if __name__ == '__main__':
     Ne = args.effectivesize
     pops = args.populations
     reps = args.reps
-    msms = '/home/ssmall2/programs_that_work/msms/bin/msms'
+    msms = '/home/scott/programs_that_work/msms/bin/msms'
     threads = args.threads
     s = 34  # number of seg sites
-    rho = 8.0  # recombination rate, rho
+    rho = args.recombination  # recombination rate, rho
     theta = 8.28  # UK 8.28, India 6.80, France 3.6, China 4.76, theta
-    sp = 0.5  # position of the selected locus
+    sp = 0.55555  # position of the selected locus
     smu = 0.01  # mutation rate from wildtype to derived
     gens = 12  # gens per year
     saa = 0  # selection coeff wildtype homo; fig1B
