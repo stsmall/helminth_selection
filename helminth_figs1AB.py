@@ -211,6 +211,7 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
     # plot of singletons, doubletons ...
     Piplot = np.append(np.sum(Splot), np.sum(Rplot, axis=0))
     Rfreq = np.repeat(np.mean(rfreq), len(Piplot))
+
     # for pi plot
     j = 1
     total_haps = int(sum(C))
@@ -222,6 +223,7 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
                 rarray[j:int(hap + j)] = i + 1
                 j += int(hap)
     rarray[0] = piix.shape[0] - sum(rarray)
+
     return(Piplot, Rfreq, rarray, rstr)
 
 
@@ -291,10 +293,10 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
             strtemp = ["R" + str(n) for n in range(0, Piplot.shape[0])]
             strdf.extend(strtemp)
             # fig1b piechart
-            se.append([selco]*len(ra))
-            mi.append([m]*len(ra))
-            rarray.append(ra)
-            rstr.append(rs)
+            se.extend([selco]*len(ra))
+            mi.extend([m]*len(ra))
+            rarray.extend(ra)
+            rstr.extend(rs)
     dfFig1b = pd.DataFrame({'sel': selpdf,
                             'mig': mdf,
                             'Fbin': strdf,
