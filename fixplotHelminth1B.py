@@ -20,20 +20,28 @@ def renamefig(fig):
     with open(fig, 'r') as figb:
         for line in figb:
             if line.startswith(","):
-                x = line.split(",")
+                x = line.strip().split(",")
                 x[0] = "Index"
+                x.append("hapfreqR")
                 f.write("{}\n".format(",".join(x)))
             else:
                 if line.split(",")[3] == "R":
+                    freqcount = 0
                     Rcount = 0
                     while line.strip().split(",")[3] == "R":
-                        x = line.strip().split(",")
-                        x[3] = "R{}".format(Rcount)
-                        f.write("{}\n".format(",".join(x)))
+                        freqcount += 1
+                        i = 0
+                        rsum = float(line.strip().split(",")[4])
+                        while round(rsum) < i:
+                            x[3] = "R{}".format(Rcount)
+                            x.append(str(freqcount))
+                            f.write("{}\n".format(",".join(x)))
+                            i += 1
+                            Rcount += 1
                         line = figb.next()
-                        Rcount += 1
                     if line.split(",")[3] == "S":
                         x = line.strip().split(",")
+                        x.append(str(round(float(x[4]))))
                         f.write("{}\n".format(",".join(x)))
     f.close()
     return(None)
