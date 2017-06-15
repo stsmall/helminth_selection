@@ -156,15 +156,7 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
        allele. Also: number of origins, total haplotype diversity, resistant
        haplotype congfig
     """
-    # TO DO: calc below for all pops
-#    nR = []  # number of resistant haps
-#    nRmax = []  # max freq of resistant hap
-#    hd = []  # haplotype diversity; Depaulis and Veuille
-#    hapconfig = []  # haplotype configuration
     rfreq = []  # frequency of resistant allele
-#    ev = []
-#    pdist = []
-#    hapconfig_commonR = []
     Rplot = np.array([], dtype=np.int64).reshape(0, demesizelist[0])
     Splot = []
     for rep in range(len(gtdict.keys())):
@@ -213,22 +205,9 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
             # for j, b in enumerate(hapr) if j > i]
         else:
             C = np.zeros(piix.shape[0])
-#            hapfreq = np.zeros(piix.shape[0])
-#                K = 0
-#                M = 0
-#                Hd = 0
-#                Ev = 0
-#                pdist = 0
         Rplot = np.vstack((Rplot, C))
         Splot.append(piix.shape[0] - riix.shape[0])
         rfreq.append(riix.shape[0] / float(piix.shape[0]))
-#            hapconfig.append(C)
-#            print(C)
-#            nR.append(K)
-#            nRmax.append(M)
-#            hd.append(Hd)
-#            ev.append(Ev)
-#            pdist.append()
     # plot of singletons, doubletons ...
     Piplot = np.append(np.sum(Splot), np.sum(Rplot, axis=0))
     Rfreq = np.repeat(np.mean(rfreq), len(Piplot))
@@ -240,22 +219,9 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
     if total_haps > 0:
         for i, hap in enumerate(C):
             if hap > 0:
-                print(j, hap, i + 1)
                 rarray[j:int(hap + j)] = i + 1
                 j += int(hap)
     rarray[0] = piix.shape[0] - sum(rarray)
-    print("\nhaps: {}\nfreq: {}\n".format(rstr, rarray))
-#    hapsummR = [np.mean(pop, axis=0) for i, pop in enumerate(zip(*hapconfig))]
-#    haparrayR = [np.vstack(i) for i in zip(*hapconfig)]
-#    for conf in haparrayR:
-#        uniq = np.array([np.array(x) for x in set(tuple(x) for x in conf)])
-#        hapf = np.array([len(conf[np.all(conf == x, axis=1)])
-#                         for x in uniq], dtype=int)
-#    hapconfig_commonR.append(zip(uniq, hapf))
-#    np.mean(nR)
-#    np.mean(hd)
-#    np.mean(nRmax)
-#    np.mean(rfreq)
     return(Piplot, Rfreq, rarray, rstr)
 
 
