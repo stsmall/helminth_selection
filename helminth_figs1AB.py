@@ -9,6 +9,9 @@ import numpy as np
 import argparse
 import subprocess
 import pandas as pd
+from libsequence.polytable import simData
+from libsequence.summstats import polySIM
+from libsequence.summstats import garudStats
 # import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
@@ -159,30 +162,41 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
     rfreq = []  # frequency of resistant allele
     Rplot = np.array([], dtype=np.int64).reshape(0, demesizelist[0])
     Splot = []
+    pdist = []
     for rep in range(len(gtdict.keys())):
         rep = str(rep)
         smark = np.where(posdict[rep] == sp)[0]
         if len(smark) > 1:
-            print("\nSmark gt 1: rep {}\n".format(rep))
+            print("\nSkipping rep {}, smark gt 1\n".format(rep))
             continue
         piix = gtdict[rep][0:demesizelist[0]]  # index for the first pop
         riix = np.where(piix[:, smark] > 0)[0]  # location of the selected
         if riix.any():
             hapr = gtdict[rep][riix]
+            uniqhaps_IBS = np.array([np.array(x) for x in set(tuple(x)
+                                     for x in hapr)])
+            hapfreq_IBS = np.array([len(hapr[np.all(hapr == x, axis=1)])
+                                    for x in uniqhaps_IBS], dtype=int)
+            uallel = hapr[:][:, smark]
+            puallel = gtdict[rep][:, smark]
+            hapr[:, smark] = 1  # sites that are IBS are read as uniqhaps
+            # change all origins to 1 even if >1
             uniqhaps = np.array([np.array(x) for x in set(tuple(x)
                                  for x in hapr)])
             hapfreq = np.array([len(hapr[np.all(hapr == x, axis=1)])
                                 for x in uniqhaps], dtype=int)
-            uallel = hapr[:][:, smark]
-            puallel = gtdict[rep][:, smark]
-            print("\nrep {}".format(rep))
-            print("number of unique resistant alleles across all pops: {}".format(
+            print("\n#rep {}".format(rep))
+            print("#number of ORIGINS: {}".format(origcount[int(rep)]))
+            print("#number of unique resistant ALLELES across ALL pops: {}".format(
                     len(np.unique(puallel[puallel > 0]))))
-            print("number of unique resistant alleles in sampled pop: {}".format(
+            print("#number of unique resistant ALLELES in SAMPLE pop: {}".format(
                     len(np.unique(uallel[uallel > 0]))))
-            print("number of unique resistant haps in sampled pop: {}, frequencies {}".format(
+            if uniqhaps_IBS.shape[0] > uniqhaps.shape[0]:
+                print("#number of resistant HAPLOTYPES (IBS) in SAMPLE pop: {}, frequencies {}".format(
+                      len(uniqhaps_IBS), hapfreq_IBS))
+                print("#number of hidden resistant HAPLOTYPES (IBS): {}".format(uniqhaps_IBS.shape[0] - uniqhaps.shape[0]))
+            print("#number of observable resistant HAPLOTYPES in SAMPLE pop: {}, frequencies {}".format(
                     len(uniqhaps), hapfreq))
-            print("number of origins: {}\n".format(origcount[int(rep)]))
             # full hap config
             n = sum(hapfreq)
             C_freq, C_count = np.unique(hapfreq, return_counts=True)
@@ -197,14 +211,44 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
             lambda_e = sum([(float(hf)/sum(hapfreq))**2 for hf in hapfreq])
             Ds = 1.0/lambda_e
             Ev = Ds/uniqhaps.shape[0]
-            print("Hd:{}\t#haps:{}\tgrtAbsFreq:{}\tEv:{}\n".format(Hd, K, M,
-                  Ev))
-            # pdist = np.zeros((hapr.shape[0], hapr.shape[0]))
+            print("#stats_r: Hd:{}\tKhaps:{}\tMaxAbsFreq:{}\tEv:{}\n".format(
+                  Hd, K, M, Ev))
             # fill pdist with below
-            # [np.count_nonzero(a != b) for i, a in enumerate(hapr)
-            # for j, b in enumerate(hapr) if j > i]
+            pdist.extend([np.count_nonzero(a != b) for i, a in enumerate(hapr)
+                          for j, b in enumerate(hapr) if j > i])
+            # popgen stats resistant
+            gtpopr = [''.join(str(n) for n in y) for y in hapr]
+            sdpopr = simData()
+            sdpopr.assign_sep(posdict[rep], gtpopr)
+            pspopr = polySIM(sdpopr)
+            theta_r = pspopr.thetaw()
+            tajd_r = pspopr.tajimasd()
+            hprime_r = pspopr.hprime()
+            pi_r = pspopr.thetapi()
+            garudStats_r = garudStats(sdpopr)  # garud 2015
+            # popgen stats all
+            gtpopa = [''.join(str(n) for n in y) for y in piix]
+            sdpopa = simData()
+            sdpopa.assign_sep(posdict[rep], gtpopa)
+            pspopa = polySIM(sdpopa)
+            theta_a = pspopa.thetaw()
+            tajd_a = pspopa.tajimasd()
+            hprime_a = pspopa.hprime()
+            pi_a = pspopa.thetapi()
+#            hapdiv_a = pspopa.hapdiv()
+#            nhaps_a = pspopa.nhaps()
+            garudStats_a = garudStats(sdpopa)  # garud 2015
+            print("#popgen_r: theta_w:{}\ttheta_pi:{}\ttajD:{}\tfaywuH:{}".format(
+                  theta_r, pi_r, tajd_r, hprime_r))
+            print("#popgen_all: theta_w:{}\ttheta_pi:{}\ttajD:{}\tfaywuH:{}".format(
+                  theta_a, pi_a, tajd_a, hprime_a))
+            print("#garud2015_r: H12:{}\tH1:{}\tH2H1:{}".format(
+                  garudStats_r['H12'], garudStats_r['H1'], garudStats_r['H2H1']))
+            print("#garud2015_all: H12:{}\tH1:{}\tH2H1:{}\n".format(
+                  garudStats_a['H12'], garudStats_a['H1'], garudStats_a['H2H1']))
         else:
             C = np.zeros(piix.shape[0])
+
         Rplot = np.vstack((Rplot, C))
         Splot.append(piix.shape[0] - riix.shape[0])
         rfreq.append(riix.shape[0] / float(piix.shape[0]))
@@ -224,7 +268,10 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
                 j += int(hap)
     rarray[0] = piix.shape[0] - sum(rarray)
 
-    return(Piplot, Rfreq, rarray, rstr)
+    # pairwise diff
+    p_dist = np.unique(pdist, return_counts=True)
+
+    return(Piplot, Rfreq, rarray, rstr, p_dist)
 
 
 def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
@@ -233,10 +280,13 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
     """
     nhap = sum(pops)
     demes = len(pops)
+    sif = sif_l * demes
+    # piechart
     se = []
     mi = []
     rarray = []
     rstr = []
+    # fig1b
     orig = []
     origsd = []
     origmax = []
@@ -245,7 +295,12 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
     mdf = []
     strdf = []
     freqr = []
-    sif = sif_l * demes
+    # pairwise
+    mip = []
+    sep = []
+    pbin = []
+    pfreq = []
+
     for selco in selp:
         for m in migp:
             ms_params = {
@@ -280,8 +335,8 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
             gtdict, posdict, origcount, freqtrace = parse_msfile(msout, nhap,
                                                                  reps)
             # calc stats
-            Piplot, freqR, ra, rs = fig1b_stats(gtdict, posdict, pops, sp,
-                                                origcount)
+            Piplot, freqR, ra, rs, pdist = fig1b_stats(gtdict, posdict, pops,
+                                                       sp, origcount)
             # fig1b csv
             piplot.extend(Piplot)
             freqr.extend(freqR)
@@ -297,6 +352,12 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
             mi.extend([m]*len(ra))
             rarray.extend(ra)
             rstr.extend(rs)
+            # fig1b pairwise
+            sep.extend([selco]*len(pdist[0]))
+            mip.extend([m]*len(pdist[0]))
+            pbin.extend(list(pdist[0]))
+            pfreq.extend(list(pdist[1]))
+    # construct df for fig1b
     dfFig1b = pd.DataFrame({'sel': selpdf,
                             'mig': mdf,
                             'Fbin': strdf,
@@ -308,21 +369,30 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
                             })
     dfFig1b = dfFig1b.loc[:, ['sel', 'mig', 'Fbin', 'Nbin', 'freqR', 'orig',
                               'origsd', 'origmax']]
+    # construct df for pichart
     dfFig1bPC = pd.DataFrame({'sel': se,
                               'mig': mi,
                               'idHap': rstr,
                               'piHap': rarray
                               })
     dfFig1bPC = dfFig1bPC.loc[:, ['sel', 'mig', 'idHap', 'piHap']]
+    # construct df for pairwise
+    dfFig1bpair = pd.DataFrame({'sel': sep,
+                                'mig': mip,
+                                'pibin': pbin,
+                                'pifreq': pfreq
+                                })
+    dfFig1bpair = dfFig1bpair.loc[:, ['sel', 'mig', 'pibin', 'pifreq']]
 
     if sAAc == sAac:
-        figname = "Fig1B_helminth-D-{}.csv".format(rho)
+        figname = "Fig1B_helminth-D-{}".format(rho)
     elif sAAc > sAac:
-        figname = "Fig1B_helminth-A-{}.csv".format(rho)
+        figname = "Fig1B_helminth-A-{}".format(rho)
     else:
-        figname = "Fig1B_helminth-R-{}.csv".format(rho)
-    dfFig1b.to_csv(figname)
-    dfFig1bPC.to_csv("Pichart-{}".format(figname))
+        figname = "Fig1B_helminth-R-{}".format(rho)
+    dfFig1b.to_csv(figname + ".csv")
+    dfFig1bPC.to_csv("{}-piechart.csv".format(figname))
+    dfFig1bpair.to_csv("{}-pairwise.csv".format(figname))
     return(None)
 
 if __name__ == '__main__':
