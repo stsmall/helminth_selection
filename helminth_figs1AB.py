@@ -21,7 +21,7 @@ parser.add_argument('-r', "--reps", type=int, required=True,
 parser.add_argument('-fa', "--figA", action="store_true",
                     help="runfigA")
 parser.add_argument('-rho', "--recombination", type=float, required=False,
-                    default=0, help="population recombination rate, default is 0")
+                    default=0, help="population recombination rate, default 0")
 parser.add_argument('-fb', "--figB", action="store_true",
                     help="runfigB")
 parser.add_argument('-D', "--dominant", action="store_true",
@@ -165,7 +165,7 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
 #    ev = []
 #    pdist = []
 #    hapconfig_commonR = []
-    Rplot = []
+    Rplot = np.array([], dtype=np.int64).reshape(0, demesizelist[0])
     Splot = []
     for rep in range(len(gtdict.keys())):
         rep = str(rep)
@@ -191,32 +191,35 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
             print("number of unique resistant haps in sampled pop: {}, frequencies {}".format(
                     len(uniqhaps), hapfreq))
             print("number of origins: {}\n".format(origcount[int(rep)]))
-#                # full hap config
-#                n = sum(hapfreq)
-#                C_freq, C_count = np.unique(hapfreq, return_counts=True)
-#                C = np.zeros(n)
-#                C[C_freq - 1] = C_count
-#                # haplotype diversity
-#                Hd = 1 - sum([(((i+1)/float(n))**2) * c
-#                              for i, c in enumerate(C)])
-#                M = max(np.nonzero(C)[0]) + 1  # greatest non-zero position
-#                K = sum(C)  # number of haps
-#                # eveness
-#                Ds = 1.0/sum([(float(hf)/(hapfreq))**2 for hf in hapfreq])
-#                Ev = Ds/uniqhaps.shape[0]
+            # full hap config
+            n = sum(hapfreq)
+            C_freq, C_count = np.unique(hapfreq, return_counts=True)
+            C = np.zeros(piix.shape[0])
+            C[C_freq - 1] = C_count
+            # haplotype diversity
+            Hd = 1 - sum([(((i+1)/float(n))**2) * c
+                          for i, c in enumerate(C)])
+            M = max(np.nonzero(C)[0]) + 1  # greatest non-zero position
+            K = sum(C)  # number of haps
+            # eveness from Chattopadhyay 2007
+            lambda_e = sum([(float(hf)/sum(hapfreq))**2 for hf in hapfreq])
+            Ds = 1.0/lambda_e
+            Ev = Ds/uniqhaps.shape[0]
+            print("Hd:{}\t#haps:{}\tgrtAbsFreq:{}\tEv:{}\n".format(Hd, K, M,
+                  Ev))
             # pdist = np.zeros((hapr.shape[0], hapr.shape[0]))
             # fill pdist with below
             # [np.count_nonzero(a != b) for i, a in enumerate(hapr)
             # for j, b in enumerate(hapr) if j > i]
         else:
-            hapfreq = np.array([0])
-#                C = np.zeros(piix.shape[0])
+            C = np.zeros(piix.shape[0])
+#            hapfreq = np.zeros(piix.shape[0])
 #                K = 0
 #                M = 0
 #                Hd = 0
 #                Ev = 0
 #                pdist = 0
-        Rplot.append(np.sort(hapfreq))
+        Rplot = np.vstack((Rplot, C))
         Splot.append(piix.shape[0] - riix.shape[0])
         rfreq.append(riix.shape[0] / float(piix.shape[0]))
 #            hapconfig.append(C)
@@ -226,12 +229,22 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
 #            hd.append(Hd)
 #            ev.append(Ev)
 #            pdist.append()
-    Rplot_m = np.zeros([len(Rplot), max([len(i) for i in Rplot])])
-    for j, r in enumerate(Rplot):
-        for i, hap in enumerate(r):
-            Rplot_m[j][i] = hap
-    Piplot = np.append(np.sum(Rplot_m, axis=0), sum(Splot))
+    # plot of singletons, doubletons ...
+    Piplot = np.append(np.sum(Splot), np.sum(Rplot, axis=0))
     Rfreq = np.repeat(np.mean(rfreq), len(Piplot))
+    # for pi plot
+    j = 1
+    total_haps = int(sum(C))
+    rstr = ["R" + str(n) for n in range(0, total_haps + 1)]
+    rarray = np.zeros(total_haps + 1)
+    if total_haps > 0:
+        for i, hap in enumerate(C):
+            if hap > 0:
+                print(j, hap, i + 1)
+                rarray[j:int(hap + j)] = i + 1
+                j += int(hap)
+    rarray[0] = piix.shape[0] - sum(rarray)
+    print("\nhaps: {}\nfreq: {}\n".format(rstr, rarray))
 #    hapsummR = [np.mean(pop, axis=0) for i, pop in enumerate(zip(*hapconfig))]
 #    haparrayR = [np.vstack(i) for i in zip(*hapconfig)]
 #    for conf in haparrayR:
@@ -243,7 +256,7 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
 #    np.mean(hd)
 #    np.mean(nRmax)
 #    np.mean(rfreq)
-    return(Piplot, Rfreq)
+    return(Piplot, Rfreq, rarray, rstr)
 
 
 def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
@@ -252,6 +265,10 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
     """
     nhap = sum(pops)
     demes = len(pops)
+    se = []
+    mi = []
+    rarray = []
+    rstr = []
     orig = []
     origsd = []
     origmax = []
@@ -295,31 +312,49 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
             gtdict, posdict, origcount, freqtrace = parse_msfile(msout, nhap,
                                                                  reps)
             # calc stats
-            Piplot, freqR = fig1b_stats(gtdict, posdict, pops, sp, origcount)
+            Piplot, freqR, ra, rs = fig1b_stats(gtdict, posdict, pops, sp,
+                                                origcount)
+            # fig1b csv
             piplot.extend(Piplot)
             freqr.extend(freqR)
-#            orig.append(np.repeat(sum([i > 1 for i in origcount])/float(reps),
-#                        len(time)))
             orig.append(np.repeat(np.mean(origcount), len(Piplot)))
             origsd.append(np.repeat(np.std(origcount), len(Piplot)))
             origmax.append(np.repeat(np.max(origcount), len(Piplot)))
             selpdf.extend([selco]*len(Piplot))
             mdf.extend([m]*len(Piplot))
-            strtemp = ["R"] * (len(Piplot) - 1)
-            strtemp.extend("S")
+            strtemp = ["R" + str(n) for n in range(0, Piplot.shape[0])]
             strdf.extend(strtemp)
+            # fig1b piechart
+            se.append([selco]*len(ra))
+            mi.append([m]*len(ra))
+            rarray.append(ra)
+            rstr.append(rs)
     dfFig1b = pd.DataFrame({'sel': selpdf,
                             'mig': mdf,
-                            'idHap': strdf,
-                            'piHap': piplot,
+                            'Fbin': strdf,
+                            'Nbin': piplot,
                             'freqR': freqr,
                             'orig': np.concatenate(orig).ravel(),
                             'origsd': np.concatenate(origsd).ravel(),
                             'origmax': np.concatenate(origmax).ravel()
                             })
-    dfFig1b = dfFig1b.loc[:, ['sel', 'mig', 'idHap', 'piHap', 'freqR', 'orig',
+    dfFig1b = dfFig1b.loc[:, ['sel', 'mig', 'Fbin', 'Nbin', 'freqR', 'orig',
                               'origsd', 'origmax']]
-    dfFig1b.to_csv("Fig1B_helminth.csv")
+    dfFig1bPC = pd.DataFrame({'sel': se,
+                              'mig': mi,
+                              'idHap': rstr,
+                              'piHap': rarray
+                              })
+    dfFig1bPC = dfFig1bPC.loc[:, ['sel', 'mig', 'idHap', 'piHap']]
+
+    if sAAc == sAac:
+        figname = "Fig1B_helminth-D-{}.csv".format(rho)
+    elif sAAc > sAac:
+        figname = "Fig1B_helminth-A-{}.csv".format(rho)
+    else:
+        figname = "Fig1B_helminth-R-{}.csv".format(rho)
+    dfFig1b.to_csv(figname)
+    dfFig1bPC.to_csv("Pichart-{}".format(figname))
     return(None)
 
 if __name__ == '__main__':
