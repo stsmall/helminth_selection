@@ -1,4 +1,3 @@
-#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
 Created on Wed Apr 19 17:31:47 2017
@@ -8,14 +7,22 @@ python helminth_figs1AB.py -N 350000 -p 20 -r 1000 -fa -A -t 5
 python helminth_figs1AB.py -N 350000 -p 20 20 20 20 20 -r 1000 -fb -A -t 5
 @author: stsmall
 """
+import sys
+import pkg_resources
 import numpy as np
 import argparse
 import subprocess
 import pandas as pd
-from libsequence.polytable import simData
-from libsequence.summstats import polySIM
 from libsequence.summstats import garudStats
-# import matplotlib.pyplot as plt
+if sys.version_info[0] > 2.9:
+    raise Exception("Not compatible with python3")
+pylib_v = pkg_resources.get_distribution("pylibseq").version
+if pylib_v == '0.1.8':
+    from libsequence.polytable import simData as simData
+    from libsequence.summstats import polySIM as polySIM
+else:
+    from libsequence.polytable import SimData as simData
+    from libsequence.summstats import PolySIM as polySIM
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-N', '--effectivesize', type=int,
@@ -49,26 +56,24 @@ def parse_msfile(msout, nhap, num_reps):
     rep = -1
     msmsfile = iter(msout.stdout.readline, '')
     for line in msmsfile:
-        line = line.decode('utf-8')
-        if line.startswith("//"):
+        if line.startswith(b'//'):
             rep += 1
             trace = []
-        elif line.startswith("Frequency"):
+        elif line.startswith(b'Frequency'):
             line = next(msmsfile)
             while not line.strip():
                 line = next(msmsfile)
-            while not line.startswith("segsites"):
+            while not line.startswith(b'segsites'):
                 trace.append(line.strip().split())
                 line = next(msmsfile)
             trace = [map(float, x) for x in trace]
             freqtrace[str(rep)] = np.vstack(trace)
-        elif line.startswith("positions"):
+        elif line.startswith(b'positions'):
             pos = np.array(line.strip().split()[1:], dtype=np.float64)
             gt_array = np.zeros((nhap, pos.shape[0]), dtype=np.uint8)
             cix = 0
             while cix < nhap:
                 line = next(msmsfile)
-                line = line.decode('utf-8')
                 line = list(line.strip())
                 try:
                     gt_array[cix, :] = np.array(line, dtype=np.uint8)
@@ -87,8 +92,8 @@ def parse_msfile(msout, nhap, num_reps):
                 cix += 1
             gtdict[str(rep)] = gt_array
             posdict[str(rep)] = pos
-        elif line.startswith("OriginCount"):
-            origcount[rep] = int(line.strip().split(":")[1])
+        elif line.startswith(b'OriginCount'):
+            origcount[rep] = int(line.strip().split(b':')[1])
             # print("Orig:{}".format(line.strip().split(":")[1]))
         else:
             pass
@@ -105,7 +110,7 @@ def fig1a_stats(freqtrace, time, Ne, gens):
     for rep in freqtrace.keys():
         time_trace = freqtrace[rep][:, 0]
         freq.append([freqtrace[rep][np.argmin(time_trace > g), 2]
-                    for g in gens_past])
+                     for g in gens_past])
     freq_mean = [np.mean(ftime) for ftime in zip(*freq)]
     return(freq_mean)
 
@@ -190,16 +195,18 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
                                 for x in uniqhaps], dtype=int)
             print("\n#rep {}".format(rep))
             print("#number of ORIGINS: {}".format(origcount[int(rep)]))
-            print("#number of unique resistant ALLELES across ALL pops: {}".format(
-                    len(np.unique(puallel[puallel > 0]))))
-            print("#number of unique resistant ALLELES in SAMPLE pop: {}".format(
-                    len(np.unique(uallel[uallel > 0]))))
+            print("#number of unique resistant ALLELES across ALL pops: {}".
+                  format(len(np.unique(puallel[puallel > 0]))))
+            print("#number of unique resistant ALLELES in SAMPLE pop: {}".
+                  format(len(np.unique(uallel[uallel > 0]))))
             if uniqhaps_IBS.shape[0] > uniqhaps.shape[0]:
-                print("#number of resistant HAPLOTYPES (IBS) in SAMPLE pop: {}, frequencies {}".format(
-                      len(uniqhaps_IBS), hapfreq_IBS))
-                print("#number of hidden resistant HAPLOTYPES (IBS): {}".format(uniqhaps_IBS.shape[0] - uniqhaps.shape[0]))
-            print("#number of observable resistant HAPLOTYPES in SAMPLE pop: {}, frequencies {}".format(
-                    len(uniqhaps), hapfreq))
+                print("#number of resistant HAPLOTYPES (IBS) in SAMPLE pop: "
+                      "{}, frequencies {}".format(len(uniqhaps_IBS),
+                                                  hapfreq_IBS))
+                print("#number of hidden resistant HAPLOTYPES (IBS): {}".
+                      format(uniqhaps_IBS.shape[0] - uniqhaps.shape[0]))
+            print("#number of observable resistant HAPLOTYPES in SAMPLE pop:"
+                  "{}, frequencies {}".format(len(uniqhaps), hapfreq))
             # full hap config
             n = sum(hapfreq)
             C_freq, C_count = np.unique(hapfreq, return_counts=True)
@@ -241,14 +248,16 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
 #            hapdiv_a = pspopa.hapdiv()
 #            nhaps_a = pspopa.nhaps()
             garudStats_a = garudStats(sdpopa)  # garud 2015
-            print("#popgen_r: theta_w:{}\ttheta_pi:{}\ttajD:{}\tfaywuH:{}".format(
-                  theta_r, pi_r, tajd_r, hprime_r))
-            print("#popgen_all: theta_w:{}\ttheta_pi:{}\ttajD:{}\tfaywuH:{}".format(
-                  theta_a, pi_a, tajd_a, hprime_a))
-            print("#garud2015_r: H12:{}\tH1:{}\tH2H1:{}".format(
-                  garudStats_r['H12'], garudStats_r['H1'], garudStats_r['H2H1']))
-            print("#garud2015_all: H12:{}\tH1:{}\tH2H1:{}\n".format(
-                  garudStats_a['H12'], garudStats_a['H1'], garudStats_a['H2H1']))
+            print("#popgen_r: theta_w:{}\ttheta_pi:{}\ttajD:{}\tfaywuH:{}".
+                  format(theta_r, pi_r, tajd_r, hprime_r))
+            print("#popgen_all: theta_w:{}\ttheta_pi:{}\ttajD:{}\tfaywuH:{}".
+                  format(theta_a, pi_a, tajd_a, hprime_a))
+            print("#garud2015_r: H12:{}\tH1:{}\tH2H1:{}".
+                  format(garudStats_r['H12'], garudStats_r['H1'],
+                         garudStats_r['H2H1']))
+            print("#garud2015_all: H12:{}\tH1:{}\tH2H1:{}\n".
+                  format(garudStats_a['H12'], garudStats_a['H1'],
+                         garudStats_a['H2H1']))
         else:
             C = np.zeros(piix.shape[0])
 
@@ -391,7 +400,7 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
         figname = "Fig1B_helminth-D-{}".format(rho)
     elif sAAc > sAac:
         figname = "Fig1B_helminth-A-{}".format(rho)
-    elif sAa == 0:
+    elif sAac == 0:
         figname = "Fig1B_helminth-R-{}".format(rho)
     dfFig1b.to_csv(figname + ".csv")
     dfFig1bPC.to_csv("{}-piechart.csv".format(figname))
@@ -403,7 +412,7 @@ if __name__ == '__main__':
     Ne = args.effectivesize
     pops = args.populations
     reps = args.reps
-    msms = '/home/ssmall2/programs_that_work/msms/bin/msms'
+    msms = '/home/scott/programs_that_work/msms/bin/msms'
     threads = args.threads
     s = 34  # number of seg sites
     rho = args.recombination  # recombination rate, rho
