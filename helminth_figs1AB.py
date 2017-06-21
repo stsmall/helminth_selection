@@ -162,7 +162,7 @@ def fig1a(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saac, sft,
     return(dfFig1a)
 
 
-def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
+def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount, sel, mig):
     """calculates the haplotype diversite of haplotypes carrying the resistant
        allele. Also: number of origins, total haplotype diversity, resistant
        haplotype congfig
@@ -194,6 +194,7 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
             hapfreq = np.array([len(hapr[np.all(hapr == x, axis=1)])
                                 for x in uniqhaps], dtype=int)
             print("\n#rep {}".format(rep))
+            print("\nsel: {}\nmig: {}".format(sel, mig))
             print("#number of ORIGINS: {}".format(origcount[int(rep)]))
             print("#number of unique resistant ALLELES across ALL pops: {}".
                   format(len(np.unique(puallel[puallel > 0]))))
@@ -271,7 +272,7 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount):
     # for pi plot
     j = 1
     total_haps = int(sum(C))
-    rstr = ["R" + str(n) for n in range(0, total_haps + 1)]
+    rstr = ["R" + str(nx) for nx in range(0, total_haps + 1)]
     rarray = np.zeros(total_haps + 1)
     if total_haps > 0:
         for i, hap in enumerate(C):
@@ -348,7 +349,7 @@ def fig1b(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac, saa, sit,
                                                                  reps)
             # calc stats
             Piplot, freqR, ra, rs, pdist = fig1b_stats(gtdict, posdict, pops,
-                                                       sp, origcount)
+                                                       sp, origcount, selco, m)
             # fig1b csv
             piplot.extend(Piplot)
             freqr.extend(freqR)
@@ -443,7 +444,7 @@ if __name__ == '__main__':
     sff = 0.33  # final freq of allele; fig1A
 
     # Fig1B
-    migp = np.arange(0.00, 0.01, 0.001)  # migration proportion
+    migp = np.arange(0.00, 0.001, 0.0001)  # migration proportion
     selpB = np.arange(0.00, 0.06, 0.006)  # selection based on Fig1A
     sif_l = [0]
     sit = 60  # when selection was first started
