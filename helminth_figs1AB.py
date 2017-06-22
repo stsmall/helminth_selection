@@ -9,6 +9,7 @@ python helminth_figs1AB.py -N 350000 -p 20 20 20 20 20 -r 1000 -fb -A -t 5
 """
 import sys
 import pkg_resources
+import itertools
 import numpy as np
 import argparse
 import subprocess
@@ -268,19 +269,14 @@ def fig1b_stats(gtdict, posdict, demesizelist, sp, origcount, sel, mig):
     # plot of singletons, doubletons ...
     Piplot = np.append(np.sum(Splot), np.sum(Rplot, axis=0))
     Rfreq = np.repeat(np.mean(rfreq), len(Piplot))
-
     # for pi plot
-    j = 1
-    total_haps = int(sum(C))
-    rstr = ["R" + str(nx) for nx in range(0, total_haps + 1)]
-    rarray = np.zeros(total_haps + 1)
-    if total_haps > 0:
-        for i, hap in enumerate(C):
-            if hap > 0:
-                rarray[j:int(hap + j)] = i + 1
-                j += int(hap)
-    rarray[0] = piix.shape[0] - sum(rarray)
-
+    pichart = [(np.nonzero(Rplot[sar])[0][::-1] + 1)
+               for sar in range(Rplot.shape[0]) if Rplot[sar].size]
+    avgresist = [np.average(i) for i in itertools.izip_longest(*pichart,
+                 fillvalue=0)]
+    rstr = ["R" + str(nx) for nx in range(0, len(avgresist) + 1)]
+    rarray = np.array(avgresist)
+    rarray = np.insert(rarray, 0, demesizelist[0] - sum(avgresist))
     # pairwise diff
     p_dist = np.unique(pdist, return_counts=True)
 
