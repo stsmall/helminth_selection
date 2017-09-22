@@ -253,7 +253,7 @@ def hapbaxVmig_sims(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac,
     if sAAc == sAac:
         figname = "{}-D-{}".format(outfile, rho)
     elif sAAc > sAac:
-        figname = "{}-{}".format(outfile, rho)
+        figname = "{}-A-{}".format(outfile, rho)
     elif sAac == 0:
         figname = "{}-R-{}".format(outfile, rho)
     dfFig1b.to_csv(figname + ".csv")
