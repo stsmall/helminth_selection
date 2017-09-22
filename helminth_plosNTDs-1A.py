@@ -14,18 +14,18 @@ import subprocess
 import pandas as pd
 from libsequence.polytable import simData
 from libsequence.fst import fst
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 
 parser = argparse.ArgumentParser()
+parser.add_argument('config', metavar='config', type=str,
+                    help='config file')
+parser.add_argument('-o', "--outfile", type=str, required=True,
+                    help='outfile name')
 parser.add_argument('-m', "--msfile", default=None, type=str,
                     help='path to ms-formatted file')
-parser.add_argument('-p', '--pops', nargs='+', type=int, required=True,
-                    help="population list")
-parser.add_argument('-np', "--n_perm", type=int, default=1000,
-                    help="number of permutations")
-parser.add_argument('-N', '--effectivesize', type=int, default=5E5,
-                    help='effective population size')
-parser.add_argument('-r', "--reps", type=int, default=1000,
-                    help="number of reps")
 parser.add_argument("--perm", action="store_true",
                     help="run permutation test")
 args = parser.parse_args()
@@ -142,7 +142,7 @@ def permtest(gtdict, posdict, pops, n_perm, fstarray):
     return([1-(f/float(n_perm)) for f in Fstdist])
 
 
-def runmssims(ms, Ne, migp, pops, reps, theta, gens, time):
+def runmssims(ms, Ne, migp, pops, reps, theta, gens, time, outfile):
     """
     """
     nhap = sum(pops)
@@ -177,19 +177,24 @@ def runmssims(ms, Ne, migp, pops, reps, theta, gens, time):
                             'fst': np.concatenate(fsts).ravel()
                             })
     dfFig1a = dfFig1a.loc[:, ['time', 'mig', 'fst']]
-    dfFig1a.to_csv("Fig1A_helminth.csv")
+    dfFig1a.to_csv("{}.csv".format(outfile))
     return(None)
 
 
 if __name__ == '__main__':
-    pops = args.pops  # list
-    reps = args.reps  # default 1000
-    Ne = args.effectivesize  # default 1E6
+    config = configparser.ConfigParser()
+    outfile = args.outfile
+    config.read(args.config)
+    sh = 'simulation'
+    Ne = config.getint(sh, 'effectivesize')
+    pops = list(map(int, config.get(sh, 'popsizes').split(",")))
+    reps = config.getint(sh, "reps")
     ms = '/usr/bin/ms'  # default path
-    gens = 12  # gens per year
-    time = [20, 60, 100]  # time in years
-    migp = [0, 0.0001, 0.001, 0.01]  # migration proportion
-    theta = 8.28  # UK 8.28, India 6.80, France 3.6, China 4.76, theta
+    gens = config.getint(sh, 'gens')
+    theta = config.getfloat(sh, 'theta')
+    mig = list(map(float, config.get(sh, 'mig').split(",")))
+    migp = np.arange(mig[0], mig[1], mig[2])
+    time = list(map(int, config.get(sh, 'join_times').split(",")))
     if args.msfile is not None:
         posdict, gtdict = readms(args.msfile, pops)
         fstarray = calcfst(pops, posdict, gtdict)
@@ -199,4 +204,4 @@ if __name__ == '__main__':
             fstpvalue = permtest(gtdict, posdict, pops, args.n_perm, a)
             print("[%s]" % ", ".join(map(str, fstpvalue)))
     else:
-        runmssims(ms, Ne, migp, pops, reps, theta, gens, time)
+        runmssims(ms, Ne, migp, pops, reps, theta, gens, time, outfile)

@@ -18,22 +18,17 @@ if pylib_v == '0.1.8':
 else:
     from libsequence.polytable import SimData as simData
     from libsequence.summstats import PolySIM as polySIM
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
+
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-N', '--effectivesize', type=int,
-                    help='effective population size', required=True)
-parser.add_argument('-p', '--populations', nargs='+', type=int, required=True,
-                    help="population list")
-parser.add_argument('-r', "--reps", type=int, required=True,
-                    help="number of reps")
-parser.add_argument('-rho', "--recombination", type=float, required=False,
-                    default=0, help="population recombination rate, default 0")
-parser.add_argument('-D', "--dominant", action="store_true",
-                    help="effect is dominant")
-parser.add_argument('-A', "--additive", action="store_true",
-                    help="effect is additive")
-parser.add_argument('-t', "--threads", type=int, required=False,
-                    default=1, help="threads")
+parser.add_argument('config', metavar='config', type=str,
+                    help='config file')
+parser.add_argument('-o', "--outfile", type=str, required=True,
+                    help='outfile name')
 args = parser.parse_args()
 
 
@@ -198,7 +193,8 @@ def hapbaxVmig_stats(gtdict, posdict, demesizelist, sp, origcount, sel, mig):
 
 
 def hapbaxVmig_sims(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac,
-                    saa, sit, sif_l, selp, migp, threads, join_times, gens):
+                    saa, sit, sif_l, selp, migp, threads, join_times, gens,
+                    outfile):
     """Simulation in msms, to explore the parameter space of migration and
     selection in determining the number of haplotype background carrying a
     resistance (derived) allele
@@ -255,51 +251,54 @@ def hapbaxVmig_sims(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac,
                             })
     dfFig1b = dfFig1b.loc[:, ['sel', 'mig', 'hapbaxmean', 'hapbaxSE']]
     if sAAc == sAac:
-        figname = "Fig1B_helminth-D-{}".format(rho)
+        figname = "{}-D-{}".format(outfile, rho)
     elif sAAc > sAac:
-        figname = "Fig1B_helminth-A-{}".format(rho)
+        figname = "{}-{}".format(outfile, rho)
     elif sAac == 0:
-        figname = "Fig1B_helminth-R-{}".format(rho)
+        figname = "{}-R-{}".format(outfile, rho)
     dfFig1b.to_csv(figname + ".csv")
     return(None)
 
 
 if __name__ == '__main__':
-    # universal options
-    Ne = args.effectivesize
-    pops = args.populations
-    reps = args.reps
-    msms = '/home/scott/programs_that_work/msms/bin/msms'
-    threads = args.threads
-    s = 34  # number of seg sites
-    rho = args.recombination  # recombination rate, rho
-    theta = 8.28  # UK 8.28, India 6.80, France 3.6, China 4.76, theta
-    sp = 0.55555  # position of the selected locus
-    smu = 0.01  # mutation rate from wildtype to derived, from theta/site
-    gens = 12  # gens per year
-    saa = 0  # selection coeff wildtype homo; fig1B
-
-    # dominance
-    if args.dominant:
+    config = configparser.ConfigParser()
+    outfile = args.outfile
+    config.read(args.config)
+    sh = 'simulation'
+    Ne = config.getint(sh, 'effectivesize')
+    pops = list(map(int, config.get(sh, 'popsizes').split(",")))
+    reps = config.getint(sh, "reps")
+    msms = config.get(sh, 'msms')
+    threads = config.getint(sh, 'threads')
+    s = config.getint(sh, 'seg')
+    rho = config.getfloat(sh, 'rho')
+    theta = config.getfloat(sh, 'theta')
+    sp = config.getfloat(sh, 'sp')
+    smu = config.getfloat(sh, 'smu')
+    gens = config.getint(sh, 'gens')
+    saa = config.getint(sh, 'saa')
+    mig = list(map(float, config.get(sh, 'mig').split(",")))
+    migp = np.arange(mig[0], mig[1], mig[2])
+    selpB = list(map(float, config.get(sh, 'selco').split(",")))
+    sif_l = list(map(float, config.get(sh, 'sif').split(",")))
+    assert len(selpB) == len(sif_l)
+    sit = config.getint(sh, "sit")
+    join_times = config.getint(sh, "join_times")
+    inherit = config.get(sh, 'inherit')
+    if "Dom" in inherit:
         # dominant
         sAAc = 2
         sAac = 2
-    elif args.additive:
+    elif "Add" in inherit:
         # recessive
         sAAc = 2
         sAac = 1
-    else:
+    elif "Rec" in inherit:
         sAAc = 2
         sAac = 0
+    else:
+        raise ValueError('Declared Inheritance not one of Dom, Add, Rec')
 
-    # options for hapbaxVmig_sims
-    migp = np.arange(0.00, 0.1, 0.01)  # migration proportion
-    selpB = [0.0150, 0.005, 0.003]
-    # selection based on estimates from freqVsel
-    sif_l = [0, 0.01, 0.05]
-    sit = 60  # when selection was first started
-    join_times = 80  # when the farms were established
-    # time in coalescent units : (gens * time) / 4*Ne
-    # time in years : (coal_U * 4*Ne) / gen
     hapbaxVmig_sims(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac,
-                    saa, sit, sif_l, selpB, migp, threads, join_times, gens)
+                    saa, sit, sif_l, selpB, migp, threads, join_times, gens,
+                    outfile)
