@@ -44,7 +44,13 @@ def readms(msfile, pops):
         for line in msfile:
             line = line.decode('utf-8')
             if line.startswith('//'):
-                rep += 1
+                line = msfile.next()
+                if line.startswith('segsites'):
+                    s = line.strip().split()[-1]
+                    if int(s) > 0:
+                        rep += 1
+                    else:
+                        continue
             elif line.startswith("positions"):
                 pos = np.array(line.strip().split()[1:], dtype=np.float64)
                 gt_array = np.zeros((nhap, pos.shape[0]), dtype=np.uint8)
@@ -73,7 +79,14 @@ def readms2(msout, pops):
     for line in msfile:
         line = line.decode('utf-8')
         if line.startswith('//'):
-            rep += 1
+            if line.startswith('//'):
+                line = msfile.next()
+                if line.startswith('segsites'):
+                    s = line.strip().split()[-1]
+                    if int(s) > 0:
+                        rep += 1
+                    else:
+                        continue
         elif line.startswith("positions"):
             pos = np.array(line.strip().split()[1:], dtype=np.float64)
             gt_array = np.zeros((nhap, pos.shape[0]), dtype=np.uint8)
@@ -142,12 +155,15 @@ def permtest(gtdict, posdict, pops, n_perm, fstarray):
     return([1-(f/float(n_perm)) for f in Fstdist])
 
 
-def runmssims(ms, Ne, migp, pops, reps, theta, gens, time, outfile):
+def runmssims(ms, Ne, migp, pops, reps, theta, rho, length, gens, time,
+              outfile):
     """
     """
     nhap = sum(pops)
     demes = len(pops)
-    fsts = []
+    fstpd = []
+    migpd = []
+    timepd = []
     for m in migp:
         for t in time:
             ms_params = {
@@ -155,12 +171,14 @@ def runmssims(ms, Ne, migp, pops, reps, theta, gens, time, outfile):
                         'nhaps': nhap,
                         'nreps': reps,
                         'theta': theta,
+                        'rho': rho,
+                        'L': length,
                         'demes': "{} {}".format(demes,
                                                 " ".join(map(str, pops))),
                         'Nm': m * 4 * Ne,
                         'time': (gens * t) / (4.0 * Ne)}
             msms_base = ("{ms} {nhaps} {nreps} -t {theta} "
-                         "-I {demes} {Nm} -ej "
+                         "-r {rho} {L} -I {demes} {Nm} -ej "
                          "{time} 2 1 -ej {time} 3 1 "
                          "-ej {time} 4 1 -ej {time} 5 1 ")
             mscmd = msms_base.format(**ms_params)
@@ -170,11 +188,12 @@ def runmssims(ms, Ne, migp, pops, reps, theta, gens, time, outfile):
             posdict, gtdict = readms2(msout, pops)
             # calc FST
             fstarray = calcfst(pops, posdict, gtdict)
-            fsts.append(np.mean(fstarray, axis=1))
-#    import ipdb;ipdb.set_trace()
-    dfFig1a = pd.DataFrame({'mig': np.repeat(migp, len(time) * reps),
-                            'time': list(np.repeat(time, reps)) * len(migp),
-                            'fst': np.concatenate(fsts).ravel()
+            fstpd.append(np.nanmean(fstarray, axis=1))
+            migpd.extend(np.repeat(m, fstarray.shape[0]))
+            timepd.extend(np.repeat(t, fstarray.shape[0]))
+    dfFig1a = pd.DataFrame({'mig': migpd,
+                            'time': timepd,
+                            'fst': np.concatenate(fstpd).ravel()
                             })
     dfFig1a = dfFig1a.loc[:, ['time', 'mig', 'fst']]
     dfFig1a.to_csv("{}.csv".format(outfile))
@@ -191,9 +210,16 @@ if __name__ == '__main__':
     reps = config.getint(sh, "reps")
     ms = '/usr/bin/ms'  # default path
     gens = config.getint(sh, 'gens')
-    theta = config.getfloat(sh, 'theta')
+    mu = config.getfloat(sh, 'mu')
+    L = config.getint(sh, 'length')
+    theta = 4 * Ne * mu * L
+    rhorat = config.getfloat(sh, 'rho')
+    rho = rhorat * theta
     mig = list(map(float, config.get(sh, 'mig').split(",")))
-    migp = np.arange(mig[0], mig[1], mig[2])
+    if mig[-1] < mig[1]:
+        migp = np.arange(mig[0], mig[1], mig[2])
+    else:
+        migp = mig
     time = list(map(int, config.get(sh, 'join_times').split(",")))
     if args.msfile is not None:
         posdict, gtdict = readms(args.msfile, pops)
@@ -204,4 +230,4 @@ if __name__ == '__main__':
             fstpvalue = permtest(gtdict, posdict, pops, args.n_perm, a)
             print("[%s]" % ", ".join(map(str, fstpvalue)))
     else:
-        runmssims(ms, Ne, migp, pops, reps, theta, gens, time, outfile)
+        runmssims(ms, Ne, migp, pops, reps, theta, rho, L, gens, time, outfile)
