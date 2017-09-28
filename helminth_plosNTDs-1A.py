@@ -166,6 +166,7 @@ def runmssims(ms, Ne, migp, pops, reps, theta, rho, length, gens, time,
     timepd = []
     for m in migp:
         for t in time:
+            tgen = (gens * t) / (4.0 * Ne)
             ms_params = {
                         'ms': ms,
                         'nhaps': nhap,
@@ -175,12 +176,12 @@ def runmssims(ms, Ne, migp, pops, reps, theta, rho, length, gens, time,
                         'L': length,
                         'demes': "{} {}".format(demes,
                                                 " ".join(map(str, pops))),
-                        'Nm': m * 4 * Ne,
-                        'time': (gens * t) / (4.0 * Ne)}
+                        'Nm': m * 4 * Ne * (demes - 1),
+                        'join': "".join(["-ej {} {} {} ".format(tgen, i, i+1)
+                                         for i in range(1, demes)])
+                        }
             msms_base = ("{ms} {nhaps} {nreps} -t {theta} "
-                         "-r {rho} {L} -I {demes} {Nm} -ej "
-                         "{time} 2 1 -ej {time} 3 1 "
-                         "-ej {time} 4 1 -ej {time} 5 1 ")
+                         "-r {rho} {L} -I {demes} {Nm} {join}")
             mscmd = msms_base.format(**ms_params)
             print(mscmd)
             msout = subprocess.Popen(mscmd, shell=True, stdout=subprocess.PIPE)

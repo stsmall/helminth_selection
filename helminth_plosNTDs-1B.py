@@ -224,7 +224,7 @@ def hapbaxVmig_sims(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac,
                         'saa': saa,
                         'sit': (gens * sit) / (4.0 * Ne),
                         'sif': "{} {}".format(demes, " ".join(map(str, sif))),
-                        'Nm': m * 4 * Ne,
+                        'Nm': m * 4 * Ne * demes,
                         't': threads,
                         'time': (gens * join_times) / (4.0 * Ne)}
             msms_base = ("{msms} -N {Ne} -ms {nhaps} {nreps} -s {seg} "
