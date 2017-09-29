@@ -203,7 +203,7 @@ def hapbaxVmig_sims(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac,
     demes = len(pops)
     hapbaxmean = []
     hapbaxSE = []
-
+    tgen = (gens * join_times) / (4.0 * Ne)
     for selco, saf in zip(selp, sif_l):
         sif = np.repeat(saf, demes)
         for m in migp:
@@ -224,14 +224,15 @@ def hapbaxVmig_sims(msms, Ne, pops, reps, s, rho, theta, sp, smu, sAAc, sAac,
                         'saa': saa,
                         'sit': (gens * sit) / (4.0 * Ne),
                         'sif': "{} {}".format(demes, " ".join(map(str, sif))),
-                        'Nm': m * 4 * Ne * demes,
+                        'Nm': m * 4 * Ne,
                         't': threads,
-                        'time': (gens * join_times) / (4.0 * Ne)}
+                        'join': "".join(["-ej {} {} {} ".format(tgen, i, i+1)
+                                         for i in range(1, demes)])
+                        }
             msms_base = ("{msms} -N {Ne} -ms {nhaps} {nreps} -s {seg} "
                          "-r {rho} -I {demes} {Nm} -Sp {selpos} -Smu {smu} "
                          "-SAA {sAA} -SAa {sAa} -Saa {saa}"
-                         " -SI {sit} {sif} -ej {time} 2 1 -ej {time} 3 1 "
-                         "-ej {time} 4 1 -ej {time} 5 1 "
+                         " -SI {sit} {sif} {join} "
                          " -oOC -Smark -SFC -threads {t}")
             mscmd = msms_base.format(**ms_params)
             print(mscmd)

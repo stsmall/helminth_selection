@@ -176,7 +176,7 @@ def runmssims(ms, Ne, migp, pops, reps, theta, rho, length, gens, time,
                         'L': length,
                         'demes': "{} {}".format(demes,
                                                 " ".join(map(str, pops))),
-                        'Nm': m * 4 * Ne * (demes - 1),
+                        'Nm': m * 4 * Ne,
                         'join': "".join(["-ej {} {} {} ".format(tgen, i, i+1)
                                          for i in range(1, demes)])
                         }
