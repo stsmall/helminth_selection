@@ -1,4 +1,3 @@
-#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
 Created on Tue May  2 13:00:27 2017
@@ -6,19 +5,26 @@ Created on Tue May  2 13:00:27 2017
 @author: scott
 """
 from __future__ import print_function
-
+import pkg_resources
 import numpy as np
 import argparse
-import random
 import subprocess
 import pandas as pd
-from libsequence.polytable import simData
-from libsequence.fst import fst
+import random
+from itertools import combinations
+pylib_v = pkg_resources.get_distribution("pylibseq").version
+if pylib_v == '0.1.8':
+    from libsequence.polytable import simData as simData
+    from libsequence.summstats import polySIM as polySIM
+    from libsequence.fst import fst as fst
+else:
+    from libsequence.polytable import SimData as simData
+    from libsequence.summstats import PolySIM as polySIM
+    from libsequence.fst import Fst as fst
 try:
     import configparser
 except ImportError:
     import ConfigParser as configparser
-
 parser = argparse.ArgumentParser()
 parser.add_argument('config', metavar='config', type=str,
                     help='config file')
@@ -29,6 +35,15 @@ parser.add_argument('-m', "--msfile", default=None, type=str,
 parser.add_argument("--perm", action="store_true",
                     help="run permutation test")
 args = parser.parse_args()
+
+
+def nonblank_lines(f):
+    """
+    """
+    for l in f:
+        line = l.rstrip()
+        if line:
+            yield line
 
 
 def readms(msfile, pops):
@@ -42,22 +57,20 @@ def readms(msfile, pops):
     # read inmsfile
     with open(msfile, 'r') as msfile:
         for line in msfile:
-            line = line.decode('utf-8')
             if line.startswith('//'):
-                line = msfile.next()
+                line = next(msfile)
                 if line.startswith('segsites'):
                     s = line.strip().split()[-1]
                     if int(s) > 0:
                         rep += 1
                     else:
                         continue
-            elif line.startswith("positions"):
+            elif line.startswith('positions'):
                 pos = np.array(line.strip().split()[1:], dtype=np.float64)
                 gt_array = np.zeros((nhap, pos.shape[0]), dtype=np.uint8)
                 cix = 0
                 while cix < nhap:
                     line = next(msfile)
-                    line = line.decode('utf-8')
                     line = list(line.strip())
                     gt_array[cix, :] = np.array(line, dtype=np.uint8)
                     cix += 1
@@ -77,57 +90,80 @@ def readms2(msout, pops):
     # read ms from stout
     msfile = iter(msout.stdout.readline, '')
     for line in msfile:
-        line = line.decode('utf-8')
-        if line.startswith('//'):
-            if line.startswith('//'):
-                line = msfile.next()
-                if line.startswith('segsites'):
+        if line != b'':
+            if line.startswith(b'//'):
+                line = next(msfile)
+                if line.startswith(b'segsites'):
                     s = line.strip().split()[-1]
                     if int(s) > 0:
                         rep += 1
                     else:
                         continue
-        elif line.startswith("positions"):
-            pos = np.array(line.strip().split()[1:], dtype=np.float64)
-            gt_array = np.zeros((nhap, pos.shape[0]), dtype=np.uint8)
-            cix = 0
-            while cix < nhap:
-                line = next(msfile)
-                line = line.decode('utf-8')
-                line = list(line.strip())
-                gt_array[cix, :] = np.array(line, dtype=np.uint8)
-                cix += 1
-            gtdict[str(rep)] = gt_array
-            posdict[str(rep)] = pos
+            elif line.startswith(b'positions'):
+                line = line.decode()
+                pos = np.array(line.strip().split()[1:], dtype=np.float64)
+                gt_array = np.zeros((nhap, pos.shape[0]), dtype=np.uint8)
+                cix = 0
+                while cix < nhap:
+                    line = next(msfile)
+                    line = line.decode()
+                    line = list(line.strip())
+                    gt_array[cix, :] = np.array(line, dtype=np.uint8)
+                    cix += 1
+                gtdict[str(rep)] = gt_array
+                posdict[str(rep)] = pos
+        else:
+            break
     return(posdict, gtdict)
 
 
-def calcfst(pops, posdict, gtdict):
+def calcfst(pops, posdict, gtdict, L, snp=True, hud=True):
     """
     """
-    fst_obs = []
     ix = 0
-    popiix = []
     pw = len(pops)
-    fstarray = np.zeros([len(posdict.keys()), (pw*(pw-1))/2])
+    fstarray = np.zeros([len(posdict.keys()), int((pw*(pw-1))/2)])
     # Observed FST
+    pix = 0
+    popdict = {}
     for p in pops:
-        popiix.append(range(ix, ix + p))
+        popdict[pix] = list(range(ix, ix + p))
         ix += p
+        pix += 1
     for r in gtdict.keys():
         fst_obs = []
-        for i, pix in enumerate(popiix):
-            for j, jix in enumerate(popiix):
-                if i > j:
-                    popX = gtdict[r][pix]
-                    popY = gtdict[r][jix]
-                    sdfst = simData()
-                    geno_fst = np.vstack([popX, popY])
-                    gtpop_fst = [''.join(str(n) for n in y) for y in geno_fst]
-                    sdfst.assign_sep(posdict[r], gtpop_fst)
-                    size = [popX.shape[0], popY.shape[0]]
-                    f1 = fst(sdfst, size)
-                    fst_obs.append(f1.slatkin())
+        if snp:
+            pos_snp = [(np.random.choice(posdict[r]))]
+            gt_snp = np.where(posdict[r] == pos_snp)[0]
+        else:
+            pos_snp = list(posdict[r])
+        for x, y in combinations(popdict.keys(), 2):
+            popX = gtdict[r][popdict[x]]
+            popY = gtdict[r][popdict[y]]
+            sdfst = simData()
+            geno = np.vstack([popX, popY])
+            geno_fst = geno[:, gt_snp]
+            gtpop = [''.join(str(n) for n in y) for y in geno_fst]
+            gtpop_fst = [i.encode() for i in gtpop]
+            sdfst.assign_sep(pos_snp, gtpop_fst)
+            size = [popX.shape[0], popY.shape[0]]
+            f1 = fst(sdfst, size)
+            if hud:
+                fst_obs.append(f1.hsm())
+            else:
+                fst_obs.append(f1.slatkin())
+                # fst_obs.append(f1.hbk())
+#        # pi
+        for z in popdict.keys():
+            sdpop = simData()
+            popZ = gtdict[r][popdict[z]]
+            geno = popZ[:, gt_snp]
+            gtpop = [''.join(str(n) for n in y) for y in geno]
+            gtpop_pi = [i.encode() for i in gtpop]
+            sdpop.assign_sep(pos_snp, gtpop_pi)
+            pspopr = polySIM(sdpop)
+            pi = pspopr.thetapi()
+            print("pop {} pi:{}".format(z, pi/L))
         fstarray[int(r), :] = fst_obs
     return(fstarray)
 
@@ -148,7 +184,9 @@ def permtest(gtdict, posdict, pops, n_perm, fstarray):
         sdfst.assign_sep(posdict[r], gtpop_fst)
         size = [popX.shape[0], popY.shape[0]]
         f1 = fst(sdfst, size)
-        fst_t.append(f1.slatkin())
+#        fst_t.append(f1.slatkin())
+        fst_t.append(f1.hsm())
+#        fst_t.appen(f1.hbk())
     # mark significant FST
     fst_tnp = np.array(fst_t)
     Fstdist = [len(np.where(f > fst_tnp)[0]) for f in fstarray]
@@ -176,19 +214,23 @@ def runmssims(ms, Ne, migp, pops, reps, theta, rho, length, gens, time,
                         'L': length,
                         'demes': "{} {}".format(demes,
                                                 " ".join(map(str, pops))),
-                        'Nm': m * 4 * Ne,
+                        'Nm': m * Ne * 4,
                         'join': "".join(["-ej {} {} {} ".format(tgen, i, i+1)
                                          for i in range(1, demes)])
                         }
-            msms_base = ("{ms} {nhaps} {nreps} -t {theta} "
-                         "-r {rho} {L} -I {demes} {Nm} {join}")
+            if rho > 0:
+                msms_base = ("{ms} {nhaps} {nreps} -t {theta} "
+                             "-r {rho} {L} -I {demes} {Nm} {join}")
+            else:
+                msms_base = ("{ms} {nhaps} {nreps} -t {theta} "
+                             "-I {demes} {Nm} {join}")
             mscmd = msms_base.format(**ms_params)
             print(mscmd)
             msout = subprocess.Popen(mscmd, shell=True, stdout=subprocess.PIPE)
             # parse
             posdict, gtdict = readms2(msout, pops)
             # calc FST
-            fstarray = calcfst(pops, posdict, gtdict)
+            fstarray = calcfst(pops, posdict, gtdict, length)
             fstpd.append(np.nanmean(fstarray, axis=1))
             migpd.extend(np.repeat(m, fstarray.shape[0]))
             timepd.extend(np.repeat(t, fstarray.shape[0]))
@@ -217,16 +259,17 @@ if __name__ == '__main__':
     rhorat = config.getfloat(sh, 'rho')
     rho = rhorat * theta
     mig = list(map(float, config.get(sh, 'mig').split(",")))
-    if mig[-1] < mig[1]:
-        migp = np.arange(mig[0], mig[1], mig[2])
+    if len(mig) > 1:
+        if mig[-1] < mig[1]:
+            migp = np.arange(mig[0], mig[1], mig[2])
     else:
         migp = mig
     time = list(map(int, config.get(sh, 'join_times').split(",")))
     if args.msfile is not None:
         posdict, gtdict = readms(args.msfile, pops)
-        fstarray = calcfst(pops, posdict, gtdict)
-        a = np.round(np.mean(fstarray, axis=0), 2)
-        print(a)
+        fstarray = calcfst(pops, posdict, gtdict, L)
+        a = np.round(np.nanmean(fstarray, axis=0), 2)
+        print("Fst average value: {}".format(a[0]))
         if args.perm:
             fstpvalue = permtest(gtdict, posdict, pops, args.n_perm, a)
             print("[%s]" % ", ".join(map(str, fstpvalue)))
