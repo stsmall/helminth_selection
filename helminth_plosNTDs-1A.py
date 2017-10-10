@@ -66,7 +66,7 @@ def readms(msfile, pops):
                     else:
                         continue
             elif line.startswith('positions'):
-                pos = np.array(line.strip().split()[1:], dtype=np.float64)
+                pos = np.array(line.strip().split()[1:], dtype=np.float128)
                 gt_array = np.zeros((nhap, pos.shape[0]), dtype=np.uint8)
                 cix = 0
                 while cix < nhap:
@@ -101,7 +101,7 @@ def readms2(msout, pops):
                         continue
             elif line.startswith(b'positions'):
                 line = line.decode()
-                pos = np.array(line.strip().split()[1:], dtype=np.float64)
+                pos = np.array(line.strip().split()[1:], dtype=np.longdouble)
                 gt_array = np.zeros((nhap, pos.shape[0]), dtype=np.uint8)
                 cix = 0
                 while cix < nhap:
@@ -135,6 +135,8 @@ def calcfst(pops, posdict, gtdict, L, snp=True, hud=True):
         if snp:
             pos_snp = [(np.random.choice(posdict[r]))]
             gt_snp = np.where(posdict[r] == pos_snp)[0]
+            if len(gt_snp) > 1:
+                gt_snp = gt_snp[0]
         else:
             pos_snp = list(posdict[r])
         for x, y in combinations(popdict.keys(), 2):
@@ -223,7 +225,7 @@ def runmssims(ms, Ne, migp, pops, reps, theta, rho, length, gens, time,
                              "-r {rho} {L} -I {demes} {Nm} {join}")
             else:
                 msms_base = ("{ms} {nhaps} {nreps} -t {theta} "
-                             "-I {demes} {Nm} {join}")
+                             "-I {demes} {Nm} {join} -p 10")
             mscmd = msms_base.format(**ms_params)
             print(mscmd)
             msout = subprocess.Popen(mscmd, shell=True, stdout=subprocess.PIPE)

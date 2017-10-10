@@ -2,15 +2,12 @@
 """
 @author: stsmall
 """
-import sys
 import pkg_resources
 import numpy as np
 import argparse
 import subprocess
 import pandas as pd
 from libsequence.summstats import garudStats
-if sys.version_info[0] > 2.9:
-    raise Exception("Not compatible with python3")
 pylib_v = pkg_resources.get_distribution("pylibseq").version
 if pylib_v == '0.1.8':
     from libsequence.polytable import simData as simData
@@ -42,47 +39,50 @@ def parse_msfile(msout, nhap, num_reps):
     rep = -1
     msmsfile = iter(msout.stdout.readline, '')
     for line in msmsfile:
-        if line.startswith(b'//'):
-            rep += 1
-            trace = []
-        elif line.startswith(b'Frequency'):
-            line = next(msmsfile)
-            while not line.strip():
+        if line != b'':
+            if line.startswith(b'//'):
+                rep += 1
+                trace = []
+            elif line.startswith(b'Frequency'):
                 line = next(msmsfile)
-            while not line.startswith(b'segsites'):
-                trace.append(line.strip().split())
-                line = next(msmsfile)
-            trace = [map(float, x) for x in trace]
-            freqtrace[str(rep)] = np.vstack(trace)
-        elif line.startswith(b'positions'):
-            pos = np.array(line.strip().split()[1:], dtype=np.float64)
-            gt_array = np.zeros((nhap, pos.shape[0]), dtype=np.uint8)
-            cix = 0
-            while cix < nhap:
-                line = next(msmsfile)
-                line = list(line.strip())
-                try:
-                    gt_array[cix, :] = np.array(line, dtype=np.uint8)
-                except IndexError:
-                    break
-                except ValueError:
-                    sdig = [i for i, s in enumerate(line) if not s.isdigit()]
-                    x = 1
-                    for s in sdig:
-                        try:
-                            line[s] = int(line[s], 36)
-                        except ValueError:
-                            line[s] = 35 + x
-                            x += 1
-                    gt_array[cix, :] = np.array(line, dtype=np.uint8)
-                cix += 1
-            gtdict[str(rep)] = gt_array
-            posdict[str(rep)] = pos
-        elif line.startswith(b'OriginCount'):
-            origcount[rep] = int(line.strip().split(b':')[1])
-            # print("Orig:{}".format(line.strip().split(":")[1]))
+                while not line.strip():
+                    line = next(msmsfile)
+                while not line.startswith(b'segsites'):
+                    trace.append(line.strip().split())
+                    line = next(msmsfile)
+                trace = [map(float, x) for x in trace]
+                freqtrace[str(rep)] = np.vstack(trace)
+            elif line.startswith(b'positions'):
+                pos = np.array(line.strip().split()[1:], dtype=np.float64)
+                gt_array = np.zeros((nhap, pos.shape[0]), dtype=np.uint8)
+                cix = 0
+                while cix < nhap:
+                    line = next(msmsfile)
+                    line = list(line.strip())
+                    try:
+                        gt_array[cix, :] = np.array(line, dtype=np.uint8)
+                    except IndexError:
+                        break
+                    except ValueError:
+                        sdig = [i for i, s in enumerate(line) if not s.isdigit()]
+                        x = 1
+                        for s in sdig:
+                            try:
+                                line[s] = int(line[s], 36)
+                            except ValueError:
+                                line[s] = 35 + x
+                                x += 1
+                        gt_array[cix, :] = np.array(line, dtype=np.uint8)
+                    cix += 1
+                gtdict[str(rep)] = gt_array
+                posdict[str(rep)] = pos
+            elif line.startswith(b'OriginCount'):
+                origcount[rep] = int(line.strip().split(b':')[1])
+                # print("Orig:{}".format(line.strip().split(":")[1]))
+            else:
+                pass
         else:
-            pass
+            break
     return(gtdict, posdict, origcount, freqtrace)
 
 
